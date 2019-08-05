@@ -1,0 +1,9 @@
+{
+  "description": "...",
+  "helpTitle": "Помощь",
+  "help": "Показывает это сообщение.",
+  "setTrue": "setTrue <role> - Установить указатель на роль True",
+  "setTrueU": "setTrueU <user> <Name> - Дать роль True этому пользователю.",
+  "setTrueError": "Неверная роль!",
+  "setTrueSuccess": "Роль была установлена успешно!"
+}
