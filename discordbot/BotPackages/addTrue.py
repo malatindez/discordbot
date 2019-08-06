@@ -28,7 +28,7 @@ class Package(pckg.Package):
             return
         if after.activity.application_id == 568473437484482561:
             role = after.guild.get_role(int(self.db.SELECT("addTrueTrueRole", ["*"], "")[0][0]))
-            nickname = after.activity.details[5:] + "✔"
+            nickname = after.activity.details[5:] + " ✔"
             if after.nick != nickname or not (role in after.roles):
                 roles = after.roles
                 if not (role in after.roles):

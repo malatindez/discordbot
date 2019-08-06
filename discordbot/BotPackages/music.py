@@ -20,11 +20,11 @@ class Package(pckg.Package):
     name = "music"
     bots = []
     def __init__(self, LocalisationReference):
+        self.LocalisationReference = LocalisationReference
         if platform.system() == "Windows":
             print("Music package cannot be loaded on Windows")
             return
         tokens = []
-        self.LocalisationReference = LocalisationReference
         if platform.system() == "Linux":
             f = open(os.path.dirname(os.path.realpath(__file__)) + "/../../musictokens")
             for token in f:

@@ -479,3 +479,5 @@ MigrationBackup/
 generated_script.py
 musictokens
 token
+*.db
+*.sqbpro
