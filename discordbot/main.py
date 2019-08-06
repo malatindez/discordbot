@@ -11,13 +11,11 @@ if platform.system() == "Linux":
     additionalStr1 = "/BotPackages/";   additionalStr2 = "\"/BotPackages/\""
 elif platform.system() == "Windows":
     additionalStr1 = "\\BotPackages\\"; additionalStr2 = "\"\\\\BotPackages\\\\\""
-print(additionalStr2)
 folderPath += additionalStr1
 Packages = []
 try:
     os.remove("generated_script.py")
 except:
-    print("1")
     pass
 """
 Создаем скрипт, который будет отвечать за работу бота.
