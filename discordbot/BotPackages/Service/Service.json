@@ -1,0 +1,38 @@
+{
+  "English": {
+    "language": "English",
+    "name": "Service",
+    "description": "Package with commands for administrator of the server.\nCannot be disabled",
+    "help": "help",
+    "helpGetLanguage": "helpGetLanguage",
+    "helpPluginList": "helpPluginList",
+    "helpEnabledPluginList": "helpEnabledPluginList",
+    "helpConnectPlugin": "helpConnectPlugin",
+    "helpDisconnectPlugin": "helpDisconnectPlugin",
+    "changeLanguageSuccess": "Successfully changed language to English!",
+    "changeLanguageError": "You've entered wrong language",
+    "pluginList": "List of plugins:",
+    "enabledPluginList": "List of enabled plugins:",
+    "connectPluginErrorNotFound": "Error: plugin not found!",
+    "connectPluginErrorAlreadyExists": "Error: plugin already enabled!",
+    "connectPluginSuccess": "Plugin successfully enabled!",
+    "disconnectPluginErrorNotFound": "Error: plugin not enabled!",
+    "disconnectPluginSuccess": "Disconnected plugin successfully!",
+    "help": "this is help message"
+  },
+  "Russian": {
+    "language": "Русский",
+    "name": "Обслуживание",
+    "description": "Пакет с командами для администратора сервера.\nНе может быть отключен",
+    "changeLanguageSuccess": "Язык был успешно изменен на русский!",
+    "changeLanguageError": "Вы ввели неверный язык",
+    "pluginList": "Список плагинов:",
+    "enabledPluginList": "Список включенных плагинов:",
+    "connectPluginErrorNotFound": "Ошибка: плагина с таким именем не существует!",
+    "connectPluginErrorAlreadyExists": "Ошибка: плагин уже подключен!",
+    "connectPluginSuccess": "Плагин успешно подключен!",
+    "disconnectPluginErrorNotFound": "Ошибка: плагин не включен!",
+    "disconnectPluginSuccess": "Плагин был успешно отключен!",
+    "help": "this is kinda russian help message"
+  }
+}
