@@ -2,15 +2,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>b0c2c69b-6967-45a2-879d-dc7a4bcfcb59</ProjectGuid>
+    <ProjectGuid>1e995e41-9195-4903-813c-d346749f3224</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>discordbot</Name>
-    <RootNamespace>discordbot</RootNamespace>
+    <Name>discordbot2</Name>
+    <RootNamespace>discordbot2</RootNamespace>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -22,10 +22,28 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Folder Include="BotPackages\" />
+    <Folder Include="BotPackages\r6stats\" />
+    <Folder Include="BotPackages\r6stats\__pycache__\" />
+    <Folder Include="BotPackages\Service\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="BotPackages\r6stats\r6stats.json" />
+    <Content Include="BotPackages\r6stats\__pycache__\AdminCommands.cpython-37.pyc" />
+    <Content Include="BotPackages\r6stats\__pycache__\browser.cpython-37.pyc" />
+    <Content Include="BotPackages\r6stats\__pycache__\r6stats.cpython-37.pyc" />
+    <Content Include="BotPackages\r6stats\__pycache__\Service.cpython-37.pyc" />
+    <Content Include="BotPackages\Service\Service.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BotPackages\r6stats\r6stats.py" />
+    <Compile Include="BotPackages\Service\Service.py" />
+    <Compile Include="BotPackages\package.py" />
     <Compile Include="Core.py" />
+    <Compile Include="DataBase.py" />
+    <Compile Include="generated_script.py" />
+    <Compile Include="Localisation.py" />
     <Compile Include="main.py" />
-    <Compile Include="Package.py" />
-    <Compile Include="Utils.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

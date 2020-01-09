@@ -1,9 +1,0 @@
-{
-  "description": "...",
-  "helpTitle": "Help",
-  "help": "Shows this message.",
-  "setTrue": "setTrue <role> - Set true role reference",
-  "setTrueU": "setTrueU <user> <Name> - Give true role to this user.",
-  "setTrueError": "Wrong role!",
-  "setTrueSuccess": "Role was installed successfully!"
-}
