@@ -1,0 +1,22 @@
+{
+  "English": {
+    "language": "English",
+    "name": "\"Rainbow Six: Siege\" Stats",
+    "help": "help",
+    "helpDescription": "helpDescription",
+    "helpStats": "helpStats",
+    "helpConnect": "helpConnect",
+    "wrongName": "WrongName",
+    "statsNDIDB": "statsNDIDB",
+    "noParams": "noParams",
+    "connectSuccess": "connectSuccess",
+    "description": "Package with commands for r6 stats",
+    "stats": "Статистика игрока {0}"
+  },
+  "Russian": {
+    "language": "Русский",
+    "name": "Статистика по \"Rainbow Six: Siege\"",
+    "description": "Пакет с командами для получения статистики",
+    "stats": "Статистика игрока {0}"
+  }
+}
