@@ -58,26 +58,35 @@ class Package(package.Package):
             return
         await player.load_general()
         await player.load_level()
-        Rank = await player.get_rank(region="EU")
-
-        img = Image.open("F:\\python\\discordbot2\\discordbot2\\template.png")
+        Rank = await player.get_rank("emea")
+        img = Image.open("template.png")
         draw = ImageDraw.Draw(img)
-        font32 = ImageFont.truetype("F:\\python\\discordbot2\\discordbot2\\BebasNeue-Bold.otf", 32)
-        font48 = ImageFont.truetype("F:\\python\\discordbot2\\discordbot2\\BebasNeue-Bold.otf", 48)
-        font56 = ImageFont.truetype("F:\\python\\discordbot2\\discordbot2\\BebasNeue-Bold.otf", 56)
-        font64 = ImageFont.truetype("F:\\python\\discordbot2\\discordbot2\\BebasNeue-Bold.otf", 64)
+        font32 = ImageFont.truetype("BebasNeue-Bold.otf", 32)
+        font48 = ImageFont.truetype("BebasNeue-Bold.otf", 48)
+        font56 = ImageFont.truetype("BebasNeue-Bold.otf", 56)
+        font64 = ImageFont.truetype("BebasNeue-Bold.otf", 64)
         def drawText(x,y, text, font):
             draw.text((x,y), str(text), (255,255,255), font = font)
-        drawText(119,250,player.level,font48)
-        drawText(240,245,id,font64)
-        drawText(110,356,round(float(player.kills)/player.deaths,2),font64)
+        if len(id) <= 8:
+            drawText(220,245,id,font64)
+        elif len(id) <= 12:
+            drawText(220,253,id,font48)
+        else:
+            drawText(220,261,id,font32)
+        if player.level % 10 == player.level:
+            drawText(140,250,player.level,font48)
+        elif player.level % 100 == player.level:
+            drawText(132,250,player.level,font48)
+        else:
+            drawText(120,250,player.level,font48)
+        drawText(110,356,round(player.kills/player.deaths,2),font64)
         drawText(249,356,player.matches_won,font64)
-        drawText(398,356,player.matches_won / (player.matches_won + player.matches_lost), font64)
+        drawText(398,356,str(int(round(player.matches_won / (player.matches_won + player.matches_lost), 2) * 100)) + " %", font64)
         drawText(138,580,player.kills, font56)
         drawText(138,670,player.matches_won + player.matches_lost, font56)
-        drawText(138,750,Rank.max_mmr, font56)
+        drawText(138,750,int(Rank.max_mmr), font56)
         img.save("tmp.png")
-        await message.channel.send(file=discord.File("F:\\python\\discordbot2\\discordbot2\\tmp.png", filename="tmp.png"))
+        await message.channel.send(file=discord.File("tmp.png", filename="tmp.png"))
     async def connect(self, params, message, core):
         id = ""
         if len(params) > 0:
