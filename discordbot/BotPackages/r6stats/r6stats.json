@@ -2,21 +2,28 @@
   "English": {
     "language": "English",
     "name": "\"Rainbow Six: Siege\" Stats",
-    "help": "help",
-    "helpDescription": "helpDescription",
-    "helpStats": "helpStats",
-    "helpConnect": "helpConnect",
-    "wrongName": "WrongName",
-    "statsNDIDB": "statsNDIDB",
-    "noParams": "noParams",
-    "connectSuccess": "connectSuccess",
-    "description": "Package with commands for r6 stats",
-    "stats": "Статистика игрока {0}"
+    "help": "Help",
+    "helpDescription": "To use command !s connect your NICKNAME",
+    "helpStats": "To find stats write !stats \"NICKNAME\" ",
+    "helpConnect": "To connect your nickname write !connect \"NICKNAME\" ",
+    "wrongName": "Nickname wasn`t found",
+    "statsNDIDB": "Nickname not connected or not found \n To connect your nickname !connect \"NICKNAME\" ",
+    "noParams": "Direct your NICKNAME after !connect",
+    "connectSuccess": "Your nickname was successfully connected!",
+    "description": "Package with commands for r6 stats"
   },
   "Russian": {
     "language": "Русский",
     "name": "Статистика по \"Rainbow Six: Siege\"",
-    "description": "Пакет с командами для получения статистики",
-    "stats": "Статистика игрока {0}"
+    "help": "Помощь",
+    "helpDescription": "Для использования команды !s подключите свой ник",
+    "helpStats": "Чтобы найти статистику напишите !stats \"ник\" ",
+    "helpConnect": "Чтобы привязать свой никнейм, напишите !connect \"ник\" ",
+    "wrongName": "Ник не был найден",
+    "statsNDIDB": "Ник не подключен или не найден \n Для подключения вашего псевдонима используйте !Connect \"ник\" ",
+    "noParams": "Напишите свой ник после !connect",
+    "connectSuccess": "Ваш ник был успешно подключен!",
+    "description": "Пакет с командами для получения статистики"
+  
   }
 }

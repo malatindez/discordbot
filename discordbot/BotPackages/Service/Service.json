@@ -3,12 +3,14 @@
     "language": "English",
     "name": "Service",
     "description": "Package with commands for administrator of the server.\nCannot be disabled",
-    "help": "help",
-    "helpGetLanguage": "helpGetLanguage",
-    "helpPluginList": "helpPluginList",
-    "helpEnabledPluginList": "helpEnabledPluginList",
-    "helpConnectPlugin": "helpConnectPlugin",
-    "helpDisconnectPlugin": "helpDisconnectPlugin",
+    "help": "Help",
+	"helpDescription": "Package with commands for administrator of the server.\nCannot be disabled",
+    "helpGetLanguage": "Returns the language that was installed in this channel.",
+    "helpPluginList": "List of plugins",
+    "helpEnabledPluginList": "List of Enabled plugins",
+    "helpConnectPlugin": "Connects plugin to current chanel",
+    "helpChangeLanguage": "Changes Language of current chanel",
+    "helpDisconnectPlugin": "Disconnects plugin from current chanel",
     "changeLanguageSuccess": "Successfully changed language to English!",
     "changeLanguageError": "You've entered wrong language",
     "pluginList": "List of plugins:",
@@ -17,8 +19,7 @@
     "connectPluginErrorAlreadyExists": "Error: plugin already enabled!",
     "connectPluginSuccess": "Plugin successfully enabled!",
     "disconnectPluginErrorNotFound": "Error: plugin not enabled!",
-    "disconnectPluginSuccess": "Disconnected plugin successfully!",
-    "help": "this is help message"
+    "disconnectPluginSuccess": "Disconnected plugin successfully!"
   },
   "Russian": {
     "language": "Русский",
@@ -33,6 +34,13 @@
     "connectPluginSuccess": "Плагин успешно подключен!",
     "disconnectPluginErrorNotFound": "Ошибка: плагин не включен!",
     "disconnectPluginSuccess": "Плагин был успешно отключен!",
-    "help": "this is kinda russian help message"
+    "help": "Помощь",
+	"helpDescription": "Џакет с командами длЯ администратора сервера.\n Ќе может быть отключеена.",
+    "helpGetLanguage": "Возвращает язык, который был установлен в данном канале.",
+    "helpPluginList": "Список плагинов",
+    "helpEnabledPluginList": "Список включенных плагинов",
+    "helpConnectPlugin": "Подключает плагин в данный канал",
+    "helpChangeLanguage": "Меняет язык данного канала",
+    "helpDisconnectPlugin": "Отключает плагин от данного канала"
   }
 }
