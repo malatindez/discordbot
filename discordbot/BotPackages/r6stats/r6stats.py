@@ -83,7 +83,9 @@ class Package(package.Package):
         except:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "wrongName"))
             return
-        ranks = [await player.get_rank("emea", i + 1) for i in range(SEASON_NUMBER - 4, SEASON_NUMBER)]
+        ranks = []
+        for i in range(SEASON_NUMBER - 4, SEASON_NUMBER):
+            await player.get_rank("emea", i + 1)
         best_mmr = 0
         for i in ranks:
             if i.max_mmr > best_mmr:
