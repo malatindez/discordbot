@@ -68,7 +68,7 @@ class Core:
         for i in self.plugins:
             i.addDBRef(self.db);
         try:
-            f = open('token'); self.token = f.readline(); f.close()
+            f = open('token'); self.token = f.readline().replace("\n", '').replace("\r", ''); f.close()
         except FileNotFoundError:
             print("Добавьте токен в папку со скриптом")
             exit()
@@ -111,6 +111,7 @@ class Core:
                 return
 
         enabledPlugins = core.getEnabledPlugins(message)
+        print(core.plugins)
         # Превращаем сообщение " *prefix* name param1 param2 param3 ..." в список [name, [param1, param2, param3, ...]]
         command = getCommand(message.content)
 
