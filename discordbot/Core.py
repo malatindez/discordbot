@@ -16,8 +16,8 @@ import operator
 import sqlite3
 core = None
 
-def getCommand(command):
-	command = command[1:]
+def getCommand(command, prefixLen):
+	command = command[prefixLen:]
 	returnValue = ['',[]]
 	for i in range(len(command)):
 		if command[i] == " ":
@@ -104,16 +104,15 @@ class Core:
             for plugin in core.plugins:
                 await plugin.on_guild_join(message.guild)
             prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)
-
+        prefix = str(prefix)
         # Если первый символ сообщения не соответствует префиксу, установленному в этой гильдии - return
         for i in range(len(prefix)):
             if prefix[i] != message.content[i]:
                 return
 
         enabledPlugins = core.getEnabledPlugins(message)
-        print(core.plugins)
         # Превращаем сообщение " *prefix* name param1 param2 param3 ..." в список [name, [param1, param2, param3, ...]]
-        command = getCommand(message.content)
+        command = getCommand(message.content, len(prefix))
 
         command[0] = command[0].lower()
 
