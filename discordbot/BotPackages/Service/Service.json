@@ -4,7 +4,7 @@
     "name": "Service",
     "description": "Package with commands for administrator of the server.\nCannot be disabled",
     "help": "Help",
-	"helpDescription": "Package with commands for administrator of the server.\nCannot be disabled",
+    "helpDescription": "Package with commands for administrator of the server.\nCannot be disabled",
     "helpGetLanguage": "Returns the language that was installed in this channel.",
     "helpPluginList": "List of plugins",
     "helpEnabledPluginList": "List of Enabled plugins",
@@ -19,7 +19,10 @@
     "connectPluginErrorAlreadyExists": "Error: plugin already enabled!",
     "connectPluginSuccess": "Plugin successfully enabled!",
     "disconnectPluginErrorNotFound": "Error: plugin not enabled!",
-    "disconnectPluginSuccess": "Disconnected plugin successfully!"
+    "disconnectPluginSuccess": "Disconnected plugin successfully!",
+    "tooBigPrefix": "Too big prefix!",
+    "wrongPrefix": "Wrong prefix!",
+    "prefixSuccessfullyChanged": "Successfully changed prefix to {0}"
   },
   "Russian": {
     "language": "Русский",
@@ -35,12 +38,15 @@
     "disconnectPluginErrorNotFound": "Ошибка: плагин не включен!",
     "disconnectPluginSuccess": "Плагин был успешно отключен!",
     "help": "Помощь",
-	"helpDescription": "Пакет с командами для администратора сервера.\n Не может быть отключен.",
+    "helpDescription": "Пакет с командами для администратора сервера.\n Не может быть отключен.",
     "helpGetLanguage": "Возвращает язык, который был установлен в данном канале.",
     "helpPluginList": "Список плагинов",
     "helpEnabledPluginList": "Список включенных плагинов",
     "helpConnectPlugin": "Подключает плагин в данный канал",
     "helpChangeLanguage": "Меняет язык данного канала",
-    "helpDisconnectPlugin": "Отключает плагин от данного канала"
+    "helpDisconnectPlugin": "Отключает плагин от данного канала",
+    "tooBigPrefix": "Слишком большой префикс!",
+    "wrongPrefix": "Неверный префикс!",
+    "prefixSuccessfullyChanged": "Префикс был успешно изменён на {0}"
   }
 }
