@@ -12,7 +12,7 @@ elif platform.system() == "Windows":
     sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)) + "\\..")
 def transformPath(path):
     if platform.system() == "Linux":
-        path.replace("\\", "/")    
+        return path.replace("\\", "/")    
     return path
 import package
 from PIL import Image, ImageFont, ImageDraw
@@ -41,7 +41,7 @@ class Package(package.Package):
     def __init__(self, core):
         self.name = "r6stats"
         super(Package, self).__init__(core)
-        self.importance = 255
+        self.importance = 0
         x = open("uplay_auth")
         self.auth = r6api.Auth(x.readline().replace("\n", "").replace('\r',''), x.readline().replace("\n", "").replace('\r',''))
     def getCommands(self):
@@ -85,7 +85,7 @@ class Package(package.Package):
             return
         ranks = []
         for i in range(SEASON_NUMBER - 4, SEASON_NUMBER):
-            await player.get_rank("emea", i + 1)
+            ranks.append(await player.get_rank("emea", i + 1))
         best_mmr = 0
         for i in ranks:
             if i.max_mmr > best_mmr:
