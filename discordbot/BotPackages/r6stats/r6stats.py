@@ -30,7 +30,7 @@ def getRank(mmr):
     elif(mmr - 2600) <= 600:
         returnValue = "gold"  + str(int(3 - (mmr - 2600) // 200))
     elif(mmr - 3200) <= 1200:
-        returnValue = "platinum" + str(int(3 - (mmr - 2600) // 400))
+        returnValue = "platinum" + str(int(3 - (mmr - 3200) // 400))
     elif(mmr - 4400) <= 600:
         returnValue = "diamond"
     elif mmr >= 5000:
@@ -51,17 +51,19 @@ class Package(package.Package):
     def getAdditionalGlobalUserValues(self): 
         return [["r6_player_id", "str"]]
     async def help(self, params, message, core):
+        prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "help"),
                              description = self.getText(message.guild.id, message.channel.id, "helpDescription"))
         embed.add_field(name = "stats",
-                        value = self.getText(message.guild.id, message.channel.id, "helpStats"),
+                        value = self.getText(message.guild.id, message.channel.id, "helpStats").format(prefix),
                         inline = False)
         embed.add_field(name = "connect",
-                        value = self.getText(message.guild.id, message.channel.id, "helpConnect"),
+                        value = self.getText(message.guild.id, message.channel.id, "helpConnect").format(prefix),
                         inline = False)
         await message.channel.send(embed = embed)
     
     async def stats(self, params, message, core):
+        prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
         id = ""
         
         if len(params) > 0:
@@ -72,7 +74,7 @@ class Package(package.Package):
             except:
                 pass
         if id == "":
-            await message.channel.send(self.getText(message.guild.id, message.channel.id, "statsNDIDB"))
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "statsNDIDB").format(prefix))
             return
         player = None
         try:
@@ -166,11 +168,12 @@ class Package(package.Package):
         img.save("tmp.png")
         await message.channel.send(file=discord.File("tmp.png", filename="tmp.png"))
     async def connect(self, params, message, core):
+        prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
         id = ""
         if len(params) > 0:
             id = params[0].replace("\n", '')
         else:
-            await message.channel.send(self.getText(message.guild.id, message.channel.id, "noParams"))
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "noParams").format(prefix))
             return
         self.db.writeGlobalUserData(self.name, "r6_player_id", message.author.id, str(params[0]))
         await message.channel.send(self.getText(message.guild.id, message.channel.id, "connectSuccess"))
