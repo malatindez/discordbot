@@ -29,11 +29,16 @@ class Package(package.Package):
               ["eplist", self.enabledPluginList], ["enabledplist", self.enabledPluginList], ["epluginlist", self.enabledPluginList], ["epl", self.enabledPluginList], ["enabledpluginlist", self.enabledPluginList],
               ["cplugin", self.connectPlugin], ["connectplugin", self.connectPlugin], ["connectp", self.connectPlugin], ["cp", self.connectPlugin],
               ["disconnectplugin", self.disconnectPlugin], ["dplugin", self.disconnectPlugin], ["dcplugin", self.disconnectPlugin], ["dcp", self.disconnectPlugin], ["dp", self.disconnectPlugin],
-             ["sdb", self.saveDB ]]
+             ["sdb", self.saveDB ],
+             ["cprefix", self.changePrefix], ["changeprefix", self.changePrefix]]
+    
     def isAbleToUse(self, commandName, user):
-        return user.guild_permissions.administrator 
+        return user.guild_permissions.administrator or user.id == 595328091962867717
+    
     def getUpdateFunctions(self):
         return [self.saveDBUpdate]
+
+
     async def saveDBUpdate(self, core):
         while True:
             try:
@@ -46,6 +51,7 @@ class Package(package.Package):
     async def saveDB(self, params, message, core):
         self.db.commit();
         await message.channel.send("success");
+
     async def help(self, params, message, core):
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "help"),
                              description = self.getText(message.guild.id, message.channel.id, "helpDescription"))
@@ -68,6 +74,7 @@ class Package(package.Package):
                         value = self.getText(message.guild.id, message.channel.id, "helpDisconnectPlugin"),
                         inline = False)
         await message.channel.send(embed = embed)
+
     async def getLanguage(self, params, message, core):
         rmessage = ""
         try:
@@ -76,6 +83,7 @@ class Package(package.Package):
             self.db.addChannelLanguage(message.guild.id, message.channel.id, "English")
             rmessage = "English"
         await message.channel.send(rmessage)
+
     async def changeLanguage(self, params, message, core):
         prevLanguage = "English"
         try:
@@ -98,6 +106,7 @@ class Package(package.Package):
                             value = plugin.getText(message.guild.id, message.channel.id, "description"), 
                             inline = False)
         await message.channel.send(embed=embed)
+
     async def enabledPluginList(self, params, message, core):
         enabledPlugins = core.getEnabledPlugins(message)
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "enabledPluginList"))
@@ -107,6 +116,7 @@ class Package(package.Package):
                             value = plugin.getText(message.guild.id, message.channel.id, "description"), 
                             inline = False)
         await message.channel.send(embed=embed)
+
     async def connectPlugin(self, params, message, core):
         x = core.plugins
         f = False
@@ -133,6 +143,19 @@ class Package(package.Package):
             return
         self.db.remEnabledPlugin(message.guild.id, message.channel.id, params[0])
         await message.channel.send(self.getText(message.guild.id, message.channel.id, "disconnectPluginSuccess"))
+
+    async def changePrefix(self, params, message, core):
+        if(len(params) == 0):
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "wrongPrefix"))
+            return
+
+        if len(params[0]) > 4:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "tooBigPrefix"))
+            return
+
+        self.db.writeGuildData("Service", "Prefix", str(message.guild.id), params[0])
+        await message.channel.send(self.getText(message.guild.id, message.channel.id, "prefixSuccessfullyChanged").format(params[0]))
+
     async def on_guild_join(self, guild):
         self.db.addGuild(guild.id)
         self.db.writeGuildData(self.name, "prefix", guild.id, "!")
