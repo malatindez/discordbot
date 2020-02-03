@@ -23,11 +23,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="BotPackages\" />
+    <Folder Include="BotPackages\music\" />
     <Folder Include="BotPackages\r6stats\" />
     <Folder Include="BotPackages\r6stats\__pycache__\" />
     <Folder Include="BotPackages\Service\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="BotPackages\music\music.json" />
     <Content Include="BotPackages\r6stats\r6stats.json" />
     <Content Include="BotPackages\r6stats\__pycache__\AdminCommands.cpython-37.pyc" />
     <Content Include="BotPackages\r6stats\__pycache__\browser.cpython-37.pyc" />
@@ -36,6 +38,13 @@
     <Content Include="BotPackages\Service\Service.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BotPackages\music\music.py" />
+    <Compile Include="BotPackages\music\musicbot.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="BotPackages\music\request.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="BotPackages\r6stats\r6stats.py" />
     <Compile Include="BotPackages\Service\Service.py" />
     <Compile Include="BotPackages\package.py" />
