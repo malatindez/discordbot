@@ -60,6 +60,7 @@ class Core:
         self.db.addGlobalUserValues(plugin.name, plugin.getAdditionalGlobalUserValues())
         self.db.addLocalUserValues(plugin.name, plugin.getAdditionalLocalUserValues())
         self.db.addGuildValues(plugin.name, plugin.getAdditionalGuildValues())
+        plugin.post__init__() # calling a postinit phase
     
     def __init__(self):
         self.db = DataBase.DataBase()
