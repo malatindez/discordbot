@@ -4,7 +4,6 @@ import os
 import discord
 import json
 import requests
-import r6sapi as r6api
 SEASON_NUMBER = 16
 if platform.system() == "Linux":
     sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)) + "/..")
@@ -42,8 +41,6 @@ class Package(package.Package):
         self.name = "r6stats"
         super(Package, self).__init__(core)
         self.importance = 0
-        x = open("uplay_auth")
-        self.auth = r6api.Auth(x.readline().replace("\n", "").replace('\r',''), x.readline().replace("\n", "").replace('\r',''))
     def getCommands(self):
         return [["help", self.help], 
                 ["stats", self.stats], ["s", self.stats], 
@@ -64,40 +61,37 @@ class Package(package.Package):
     
     async def stats(self, params, message, core):
         prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
-        id = ""
+        name = ""
         
         if len(params) > 0:
-            id = params[0].replace("\n", '')
+            name = params[0].replace("\n", '')
         else:
             try:
-                id = self.db.getGlobalUserData(self.name, "r6_player_id", str(message.author.id))
+                name = self.db.getGlobalUserData(self.name, "r6_player_id", str(message.author.id))
             except:
                 pass
-        if id == "":
+        if name == "":
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "statsNDIDB").format(prefix))
             return
-        player = None
-        try:
-            player = await self.auth.get_player(id, r6api.Platforms.UPLAY)
-            await player.load_general()
-            await player.load_level()
-            await player.check_queues()
-        except:
+        response = requests.get("https://r6.tracker.network/profile/pc/{0}".format(name))
+        x = str(response.content)
+        if not response.ok:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "wrongName"))
             return
-        ranks = []
-        for i in range(SEASON_NUMBER - 4, SEASON_NUMBER):
-            ranks.append(await player.get_rank("emea", i + 1))
-        best_mmr = 0
-        for i in ranks:
-            if i.max_mmr > best_mmr:
-                best_mmr = i.max_mmr
+        def findStat(str):
+            a = x.find(str)
+            end1 = x.find("<", a + len(str))
+            end2 = x.find("\\n", a + len(str))
+            return x[a + len(str): a + end1 if end1 < end2 else end2]
+        best_mmr = int(findStat('Best MMR Rating</div>\\n<div class="trn-defstat__value">\\n').replace(',',''))
         current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\unranked.png")
-        if (ranks[3].wins + ranks[3].losses) >= 10:
-            current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\" + getRank(ranks[3].mmr))
-        max_rank = transformPath("BotPackages\\r6stats\\ranks\\small\\" + getRank(best_mmr))
+        try:
+            current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\" + getRank(int(findStat('SHIFTING TIDES</div>\\n<div>\\n').replace(',',''))))
+        except:
+            pass
+        best_rank = transformPath("BotPackages\\r6stats\\ranks\\small\\" + getRank(best_mmr))
         img_cr = Image.open(current_rank)
-        img_mr = Image.open(max_rank)
+        img_mr = Image.open(best_rank)
         img = Image.open(transformPath("BotPackages\\r6stats\\template.png"))
         img.paste(img_cr, (520, 250))
         img.paste(img_mr, (280, 920))
@@ -110,60 +104,47 @@ class Package(package.Package):
         font80 = ImageFont.truetype(transformPath("BotPackages\\r6stats\\BebasNeue-Bold.otf"), 80)
         def drawText(x,y, text, font):
             draw.text((x,y), str(text), (255,255,255), font = font)
-        if len(id) <= 8:
-            drawText(270,326,id,font80)
-        elif len(id) <= 12:
-            drawText(270,318,id,font64)
+        if len(name) <= 8:
+            drawText(270,326,name,font80)
+        elif len(name) <= 12:
+            drawText(270,318,name,font64)
         else:
-            drawText(270,310,id,font48)
+            drawText(270,310,name,font48)
         
-        drawText(1475 - len(id)*13,100,id,font80)
+        drawText(1475 - len(name)*13,100,name,font80)
         
+        level = int(findStat('Level</div>\\n<div class="trn-defstat__value">\\n'))
         
-        if player.level % 10 == player.level:
-            drawText(188,316,player.level,font64)   
-        elif player.level % 100 == player.level:
-            drawText(166,316,player.level,font64)
+        if level % 10 == level:
+            drawText(188,316,level,font64)   
+        elif level % 100 == level:
+            drawText(166,316,level,font64)
         else:
-            drawText(152,316,player.level,font64)
+            drawText(152,316,level,font64)
 
-        drawText(312, 465, player.matches_won,font80)
-        drawText(147, 734, player.kills, font80)
-        drawText(147, 844, player.matches_won + player.matches_lost, font80)
-        drawText(147, 954, int(best_mmr), font80)
+
+
+        drawText(312, 465, findStat('PVPMatchesWon">\\n'), font80)
+        drawText(147, 734, findStat('PVPKills">\\n'), font80)
+        drawText(147, 844, findStat('PVPMatchesPlayed">\\n'), font80)
         drawText(147, 954, int(best_mmr), font80)
         
-        drawText(1220, 288, player.casual.won, font80)
-        drawText(1220, 421, player.casual.lost, font80)
-        drawText(1906, 986, round(player.ranked.kills / player.ranked.deaths, 2), font80)
-        drawText(1220, 689, player.casual.kills, font80)
-        drawText(1220, 840, player.casual.deaths, font80)
+        drawText(1220, 288, findStat('CasualWins">\\n'), font80)
+        drawText(1220, 421, findStat('CasualLosses">\\n'), font80)
+        drawText(1220, 689, findStat('CasualKills">\\n'), font80)
+        drawText(1220, 840, findStat('CasualDeaths">\\n'), font80)
+        drawText(1220, 986, findStat('CasualKDRatio">\\n'), font80)
+        drawText(1220, 552, findStat('CasualWLRatio">\\n'), font80)
 
-        drawText(1906, 288, player.ranked.won, font80)
-        drawText(1906, 421, player.ranked.lost, font80)
-        drawText(1906, 689, player.ranked.kills, font80)
-        drawText(1906, 840, player.ranked.deaths, font80)
+        drawText(1906, 288, findStat('RankedWins">\\n'), font80)
+        drawText(1906, 421, findStat('RankedLosses">\\n'), font80)
+        drawText(1906, 689, findStat('RankedKills">\\n'), font80)
+        drawText(1906, 840, findStat('RankedDeaths">\\n'), font80)
+        drawText(1906, 986, findStat('RankedKDRatio">\\n'), font80)
+        drawText(1906, 552,findStat('RankedWLRatio">\\n'), font80)
         
-        try:
-            drawText(144, 465, round(player.kills / player.deaths, 2), font80)
-        except:
-            pass
-        try:
-            drawText(506, 465, str(int(round(player.matches_won / (player.matches_won + player.matches_lost), 2) * 100)) + " %", font80)
-        except:
-            pass
-        try:
-            drawText(1906, 552, str(int(round(player.ranked.won / (player.ranked.won + player.ranked.lost), 2) * 100)) + " %", font80)
-        except:
-            pass
-        try:
-            drawText(1220, 552, str(int(round(player.casual.won / (player.casual.won + player.casual.lost), 2) * 100)) + " %", font80)
-        except:
-            pass
-        try:
-            drawText(1220, 986, round(player.casual.kills / player.casual.deaths, 2), font80)
-        except:
-            pass
+        drawText(144, 465, findStat('PVPKDRatio">\\n'), font80)
+        drawText(506, 465, findStat('PVPWLRatio">\\n'), font80)
 
         img.save("tmp.png")
         await message.channel.send(file=discord.File("tmp.png", filename="tmp.png"))
