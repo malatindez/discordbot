@@ -1,0 +1,18 @@
+{
+  "English": {
+    "language": "English",
+    "name": "Music bot package",
+    "help": "Help",
+    "helpDescription": "",
+    "description": "Package with commands for music bot",
+    "channelNotFound": "You're not connected to any channel"
+  },
+  "Russian": {
+    "language": "Русский",
+    "name": "Пакет музыкального бота",
+    "help": "Помощь",
+    "helpDescription": "",
+    "description": "Package with commands for music bot",
+    "channelNotFound":  "You're not connected to any channel"
+  }
+}
