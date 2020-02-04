@@ -5,7 +5,10 @@
     "help": "Help",
     "helpDescription": "",
     "description": "Package with commands for music bot",
-    "channelNotFound": "You're not connected to any channel"
+    "channelNotFound": "You're not connected to any channel",
+    "playing": "Now playing {}",
+    "nothingIsPlaying": "Nothing is playing in your channel.",
+    "queueFor":  "Queue for {}"
   },
   "Russian": {
     "language": "Русский",
@@ -13,6 +16,9 @@
     "help": "Помощь",
     "helpDescription": "",
     "description": "Package with commands for music bot",
-    "channelNotFound":  "You're not connected to any channel"
+    "channelNotFound": "You're not connected to any channel",
+    "playing": "Сейчас играет {}",
+    "nothingIsPlaying": "Nothing is playing in your channel.",
+    "queueFor": "Queue for {}"
   }
 }
