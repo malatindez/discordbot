@@ -24,7 +24,7 @@ import asyncio
 from queue import Queue
 from music_network import bconn
 import youtube_dl
-outtmpl = 'music\\%(id)s'
+outtmpl = 'musicF\\%(id)s'
 if platform.system() == "Linux":
     outtmpl = 'music/%(id)s' 
 class Package(package.Package):
@@ -49,7 +49,9 @@ class Package(package.Package):
         self.queue = Queue()
 
     def getCommands(self): 
-        return [["help", self.help], ["play", self.play], ["queue", self.queueF]]
+        return [["help", self.help], ["play", self.play], ["queue", self.queueF],
+                ["pause", self.pause], ["resume", self.resume], ["skip", self.skip],
+                ["shuffle", self.shuffle], ["stop", self.stop], ["repeat", self.repeat]]
     
     def getUpdateFunctions(self):
         return [self.initNetwork]
@@ -96,7 +98,17 @@ class Package(package.Package):
                     return voice_channel
         return None
 
+    async def findConnection(self, VoiceChannel):
+        await self.lock.acquire()
+        for c in self.connections:
+            for vc_id in c.gvc_ids.values():
+                if VoiceChannel.id == vc_id:
+                    self.lock.release()
+                    return c
+        self.lock.release()
+
     async def connect(self, voice_channel, text_channel):
+        await self.lock.acquire()
         for connection in self.connections:
             for guild_id in connection.gvc_ids.keys():
                 if guild_id == voice_channel.guild.id:
@@ -105,8 +117,12 @@ class Package(package.Package):
                     await connection.GET(0x100, [voice_channel.id])
                     connection.gvc_ids[guild_id] = voice_channel.id
                     print(connection.gvc_ids)
+                    self.lock.release()
                     return connection
+        self.lock.release()
+
     info_extractor = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
+   
     async def play(self, params, message, core):
         VoiceChannel = await self.findUserChannel(message)
         if VoiceChannel is None:
@@ -143,18 +159,13 @@ class Package(package.Package):
             hooked_data = {'filename':str(outtmpl % {'id': r['id']})}
         except FileNotFoundError:
             downloader.download([url])
+            
+        connection = await self.findConnection(VoiceChannel)
 
-        connection = None
-
-        await self.lock.acquire()
-        for c in self.connections:
-            for vc_id in c.gvc_ids.values():
-                if VoiceChannel.id == vc_id:
-                    connection = c
-                    hooked_data = {'filename':outtmpl % {'id': r['id']}}
-        if connection == None:
+        if connection is None:
             connection = await self.connect(VoiceChannel, message.channel)
-        self.lock.release()
+        else:
+            hooked_data = {'filename':outtmpl % {'id': r['id']}}
 
         itr = 0
         while hooked_data is None:
@@ -163,20 +174,51 @@ class Package(package.Package):
             await asyncio.sleep(1)
             itr += 1
         connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'], r['title'], 
-                        self.getText(message.guild.id, message.channel.id, "playing")])
-
-    async def queueF(self, params, message, core):
+                        self.getText(message.guild.id, message.channel.id, "play"),
+                        self.getText(message.guild.id, message.channel.id, "playQueue")])
+    async def doStuff(self, message):
         VoiceChannel = await self.findUserChannel(message)
         if VoiceChannel is None:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
-        connection = None
-        for c in self.connections:
-            for vc_id in c.gvc_ids.values():
-                if VoiceChannel.id == vc_id:
-                    connection = c
+            return None
+        connection = await self.findConnection(VoiceChannel)
         if connection is None:
-            await text_channel.send(self.getText(message.guild.id, message.channel.id, "errorNoBotInChannel"))
-            return
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorNoBotInChannel"))
+            return None
+        return (VoiceChannel, connection)
+    async def queueF(self, params, message, core):
+        VoiceChannel, connection = await self.doStuff(message)
         connection.POST(0x102, [VoiceChannel.id, message.channel.id, 
                                 self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
                                 self.getText(message.guild.id, message.channel.id, "queueFor")])
+
+    async def pause(self, params, message, core):
+        VoiceChannel, connection = await self.doStuff(message)
+        connection.POST(0x103, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "pause")])
+    async def resume(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        connection.POST(0x104, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "resume")])
+    async def skip(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        connection.POST(0x105, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "skip"),
+                                self.getText(message.guild.id, message.channel.id, "skipError")])
+    async def shuffle(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        connection.POST(0x106, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "shuffle"),
+                                self.getText(message.guild.id, message.channel.id, "shuffleError")])
+    async def stop(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        await self.UVC([VoiceChannel.id], connection)
+        connection.POST(0x107, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "stop")]) 
+    async def repeat(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        await self.UVC([VoiceChannel.id], connection)
+        connection.POST(0x108, [VoiceChannel.id, message.channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "repeat"),
+                                self.getText(message.guild.id, message.channel.id, "repeatQueue"),
+                                self.getText(message.guild.id, message.channel.id, "repeatError")]) 
