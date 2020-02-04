@@ -477,8 +477,7 @@ MigrationBackup/
 
 
 generated_script.py
-musictokens
-token
+*token*
 uplay_auth
 *.sql
 *.sqbpro
