@@ -166,8 +166,8 @@ class Package(package.Package):
                         self.getText(message.guild.id, message.channel.id, "playing")])
 
     async def queueF(self, params, message, core):
-        channel = await self.findUserChannel(message)
-        if channel is None:
+        VoiceChannel = await self.findUserChannel(message)
+        if VoiceChannel is None:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
         connection = None
         for c in self.connections:
@@ -175,8 +175,8 @@ class Package(package.Package):
                 if VoiceChannel.id == vc_id:
                     connection = c
         if connection is None:
-            await text_channel.send(self.getText(texxt_channel.guild.id, text_channel.id, "errorNoBotInChannel"))
+            await text_channel.send(self.getText(message.guild.id, message.channel.id, "errorNoBotInChannel"))
             return
-        connection.POST(0x102, [voice_channel.id, text_channel.id, 
+        connection.POST(0x102, [VoiceChannel.id, message.channel.id, 
                                 self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
                                 self.getText(message.guild.id, message.channel.id, "queueFor")])
