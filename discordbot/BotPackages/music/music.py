@@ -22,7 +22,7 @@ import subprocess
 import socket
 import asyncio
 from queue import Queue
-from Request import Request
+from music_network import bconn
 import youtube_dl
 outtmpl = 'music\\%(id)s'
 if platform.system() == "Linux":
@@ -33,10 +33,12 @@ class Package(package.Package):
         super(Package, self).__init__(core)
         self.importance = 0
         
+        self.lock = asyncio.Lock()
+
         self.network = socket.socket()
         self.network.bind(('localhost', 28484))
         self.network.listen(16)
-
+        
         self.musicbots = []
         open('musictokens', 'a').close()
         lines = open('musictokens', 'r').readlines()
@@ -45,55 +47,40 @@ class Package(package.Package):
             token = token.replace('\r', '').replace('\n', '')
             os.system("start python BotPackages\\music\\musicbot.py " + token)
         self.queue = Queue()
+
     def getCommands(self): 
         return [["help", self.help], ["play", self.play], ["queue", self.queueF]]
     
     def getUpdateFunctions(self):
-        return [self.musicNetwork]
+        return [self.initNetwork]
+    # update voice channels
+    # data == [voice_channel]
+    # code - 0
+    async def UVC(self, data, conn):
+        await self.lock.acquire()
+        for g_id in conn.gvc_ids.keys():
+            if conn.gvc_ids[g_id] == data[0]:
+                conn.gvc_ids[g_id] = None
+        self.lock.release()
     #item:
     # async def command
     # [command, voiceChannel, additional_data]
-    async def musicNetwork(self, core):
-        alive = Request.create(0, []).to_bytes()
-        response = Request()
-        def intToByte(x):
-            return int.to_bytes(x,1,byteorder='big')
-
-        connections = []
+    async def initNetwork(self, core):
+        self.connections = []
         while not hasattr(self, 'network') or not hasattr(self, 'queue') :
             await asyncio.sleep(1)
-        while len(connections) != self.botsnum:
+        while len(self.connections) != self.botsnum:
             conn, addr = self.network.accept()
-            connections.append([conn, addr])
+            self.connections.append(bconn(conn, callbacks=[[self.UVC, 0]]))
             await asyncio.sleep(0.25)
-        await asyncio.sleep(10)
-        
-        for connection in connections:
-            connection[0].send(Request.create(1,[]).to_bytes())
-        await asyncio.sleep(1)
-        # loading user id
-        for connection in connections:
-            response.from_bytes(connection[0].recv(1024))
-            connection.append(response[0])
-
-        for connection in connections:
-            connection[0].send(Request.create(2,[]).to_bytes())
-        await asyncio.sleep(1)
-        # loading guilds
-        for connection in connections:
-            response.from_bytes(connection[0].recv(1024))
-            connection.append(response.data)
-            connection.append([]) # list of guilds and voice chats where bot is playing
-        print(connections)
-
-        while True:
-            if self.queue.empty():
-                for connection in connections:
-                    connection[0].send(alive)
-                await asyncio.sleep(1)
-            else:
-                item = self.queue.get()
-                self.core.client.loop.create_task(item[0](item[1], item[2], connections, item[3:]))
+                
+        for connection in self.connections:
+            connection.used_id = (await connection.GET(0,[], 0.05))[0]
+            connection.guild_ids = await connection.GET(1,[], 0.05)
+            connection.gvc_ids = {} # guild and voice channel ids
+            for guild_id in connection.guild_ids:
+                connection.gvc_ids.update({guild_id: None})
+            connection.vc_id = 0
 
     async def help(self, params, message, core):
         prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
@@ -109,44 +96,49 @@ class Package(package.Package):
                     return voice_channel
         return None
 
-    def connect(self, voice_channel, text_channel, connections):
-        for connection in connections:
-            if voice_channel.guild.id in connection[3]:
-                flag = False
-                for guild_id, vc_id in connection[4]:
-                    if guild_id == voice_channel.guild.id:
-                        flag = True
+    async def connect(self, voice_channel, text_channel):
+        for connection in self.connections:
+            for guild_id in connection.gvc_ids.keys():
+                if guild_id == voice_channel.guild.id:
+                    if connection.gvc_ids[guild_id] is not None:
                         break
-                if not flag:
-                    connection[0].send(Request.create(3, [voice_channel.id]).to_bytes())
-                    connection[4].append([voice_channel.guild.id, voice_channel.id])
+                    await connection.GET(0x100, [voice_channel.id])
+                    connection.gvc_ids[guild_id] = voice_channel.id
+                    print(connection.gvc_ids)
                     return connection
     info_extractor = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
-    async def playC(self, voice_channel, text_channel, connections, data):
+    async def play(self, params, message, core):
+        VoiceChannel = await self.findUserChannel(message)
+        if VoiceChannel is None:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
         hooked_data = None
         def hook(data):
             if not data['status'] == 'downloading':
                 print(data)
                 nonlocal hooked_data
                 hooked_data = data
-        downloader = youtube_dl.YoutubeDL({'format': 'worstaudio', 'progress_hooks': [hook], 'outtmpl': outtmpl})
-        url = data[0][0]
-        for i in data[0][1:]:
+        
+        downloader = youtube_dl.YoutubeDL({'format': 'bestaudio', 'progress_hooks': [hook], 'outtmpl': outtmpl})
+        
+        url = params[0] # formatting params [Hollywood, Undead, -, Bullet] to "Hollywood Undead - Bullet"
+        for i in params[1:]:
             url += " " + i
+        
         r = None
-        if not isURL(url):
+        if not isURL(url): # if msg not a url, but a search request: 
             r = self.info_extractor.extract_info("ytsearch:{}".format(url), download=False)
             url = r['entries'][0]['webpage_url']
             r = r['entries'][0]
-        else:
+        else: # if msg is a url:
             r = self.info_extractor.extract_info(url, download=False)
             if 'entries' in r:
                 r = r['entries'][0]
 
         if r['duration'] > 600:
-            await text_channel.send(self.getText(text_channel.guild.id, text_channel.id, "errorTooBigDuration"))
+            await text_channel.send(self.getText(message.guild.id, message.channel.id, "errorTooBigDuration"))
             return
-        try:
+        
+        try: # checking if song already downloaded
             open(outtmpl % {'id': r['id']},'rb')
             hooked_data = {'filename':str(outtmpl % {'id': r['id']})}
         except FileNotFoundError:
@@ -154,36 +146,37 @@ class Package(package.Package):
 
         connection = None
 
-        for c in connections:
-            for guild_id, vc_id in c[4]:
-                if voice_channel.id == vc_id:
+        await self.lock.acquire()
+        for c in self.connections:
+            for vc_id in c.gvc_ids.values():
+                if VoiceChannel.id == vc_id:
                     connection = c
                     hooked_data = {'filename':outtmpl % {'id': r['id']}}
         if connection == None:
-            connection = self.connect(voice_channel, text_channel, connections)
+            connection = await self.connect(VoiceChannel, message.channel)
+        self.lock.release()
+
+        itr = 0
         while hooked_data is None:
+            if itr > 60:
+                return
             await asyncio.sleep(1)
-        print(hooked_data)
-        connection[0].send(Request.create(4, [voice_channel.id, text_channel.id, hooked_data['filename'], r['title']]).to_bytes())
-    async def play(self, params, message, core):
-        channel = await self.findUserChannel(message)
-        if channel is None:
-            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
-        self.queue.put([self.playC, channel, message.channel, params[0:]])
+            itr += 1
+        connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'], r['title'], 
+                        self.getText(message.guild.id, message.channel.id, "playing")])
 
-
-    async def queueC(self, voice_channel, text_channel, connections, data):
-        connection = None
-        for c in connections:
-            for guild_id, vc_id in c[4]:
-                if voice_channel.id == vc_id:
-                    connection = c
-        if connection is None:
-            await text_channel.send(self.getText(texxt_channel.guild.id, text_channel.id, "errorNoBotInChannel"))
-            return
-        connection[0].send(Request.create(5, [voice_channel.id, text_channel.id]).to_bytes())
     async def queueF(self, params, message, core):
         channel = await self.findUserChannel(message)
         if channel is None:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
-        self.queue.put([self.queueC, channel, message.channel, params[0:]])
+        connection = None
+        for c in self.connections:
+            for vc_id in c.gvc_ids.values():
+                if VoiceChannel.id == vc_id:
+                    connection = c
+        if connection is None:
+            await text_channel.send(self.getText(texxt_channel.guild.id, text_channel.id, "errorNoBotInChannel"))
+            return
+        connection.POST(0x102, [voice_channel.id, text_channel.id, 
+                                self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
+                                self.getText(message.guild.id, message.channel.id, "queueFor")])
