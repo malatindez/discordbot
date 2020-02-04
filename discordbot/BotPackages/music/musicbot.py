@@ -53,7 +53,7 @@ async def playCallback(data, bconn):
     client.loop.create_task(play(data[0], data[1], data[2], data[3], data[4]))
 async def queuef(vc_id, tc_id, nothingInQueue, queue_for):
     tchannel = client.get_channel(tc_id)
-    for VoiceChannel, VoiceClient, queue, ffmpeg in voice_clients:
+    for VoiceChannel, VoiceClient, queue, ffmpeg, timestamp in voice_clients:
         if VoiceChannel.id == vc_id:
             embed = None
             print(queue)
@@ -100,7 +100,11 @@ async def queueHandler():
                 except:
                     voice_clients.remove(client)
         await asyncio.sleep(1)
-    
+        if conn is not None:
+            if conn.dead:
+                for vc in voice_clients:
+                    await vc[1].disconnect()
+                exit()
 @client.event
 async def on_ready():
     print("Вошёл как " + client.user.name + ". Мой ID: " + str(client.user.id))
