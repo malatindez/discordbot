@@ -2,7 +2,7 @@ import sqlite3
 import json
 class DataBase():
     def __init__(self):
-        self.db = sqlite3.connect("DataBase.sql")
+        self.db = sqlite3.connect("DataBase.sqlite3")
         self.cursor = self.db.cursor()
         try:
             self.cursor.execute("CREATE TABLE Guilds('id' int64, 'channelLanguages' str, 'enabledPlugins' str)")
