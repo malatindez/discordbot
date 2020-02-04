@@ -122,6 +122,10 @@ class Core:
                 for PCommand in plugin.getCommands():
                     if PCommand[0] == command[0]:
                         if plugin.isAbleToUse(PCommand[1], message.author):
+                            try:
+                                await message.delete()
+                            except:
+                                pass
                             await PCommand[1](command[1], message, core)
                         return
 
