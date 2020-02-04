@@ -28,7 +28,7 @@ sock = socket.socket()
 # data[2] - file_path
 from time import time, sleep
 from random import randint
-delete_after = 30
+std_delete_after = 60
 conn = None
 async def get_user_id(data, bconn):
     return [client.user.id]
@@ -44,14 +44,56 @@ class VClientData:
         self.queue = queue
         self.ffmpeg = ffmpeg
         self.timestamp = timestamp
-    async def play(self, data):
-        voice_channel_id, text_channel_id, filepath, title, nowplaying, addedToQueue = data
+        self.repeat = 0
+        self.shuffle = 0
+    async def update(self):
+        print(self.repeat)
         if self.VoiceClient.is_playing():
-            await client.get_channel(text_channel_id).send(addedToQueue.format(title), delete_after = delete_after)
-        self.queue.append([filepath, title, text_channel_id, nowplaying])
+            self.timestamp = time()
+        elif len(self.queue) == 1:
+            if self.repeat == 1:
+                song = self.queue[0]
+                if song is not None:
+                    self.ffmpeg = discord.FFmpegPCMAudio(song[0])
+                    self.VoiceClient.play(self.ffmpeg)
+                    await client.get_channel(song[2]).send(song[3].format(song[1]))
+            else:
+                self.queue[0] = None
+        elif len(self.queue) > 1:
+            song = None
+            if self.repeat == 0:
+                if self.shuffle:
+                    rand = randint(1, len(self.queue)-1)
+                    song = self.queue[rand]
+                    self.queue.remove(self.queue[rand])
+                    self.queue.insert(1,song)
+                else:
+                    song = self.queue[1]
+                self.queue.remove(self.queue[0])
+            elif self.repeat == 1:
+                song = self.queue[0]
+            elif self.repeat == 2:
+                if self.shuffle:
+                    song = self.queue[randint(1, len(self.queue)-1)]
+                else:
+                    song = self.queue[1]
+                buf = self.queue[0]
+                self.queue.remove(self.queue[0])
+                self.queue.append(buf)
+            print(song)
+            self.ffmpeg = discord.FFmpegPCMAudio(song[0])
+            self.VoiceClient.play(self.ffmpeg)
+            await client.get_channel(song[2]).send(song[3].format(song[1]))
+            
+
+    async def play(self, data):
+        voice_channel_id, text_channel_id, filepath, title, userid, nowplaying, addedToQueue = data
+        tchannel = client.get_channel(text_channel_id)
+        await tchannel.send(addedToQueue.format(title, tchannel.guild.get_member(userid).mention))
+        self.queue.append([filepath, title, text_channel_id, nowplaying, userid])
 
     async def queuef(self, data):
-        vc_id, tc_id, nothingInQueue, queue_for = data
+        vc_id, tc_id, nothingInQueue, queue_for, queue_title = data
         tchannel = client.get_channel(tc_id)
         embed = None
         if len(self.queue) == 1 and self.queue[0] is None:
@@ -60,59 +102,76 @@ class VClientData:
             embed = discord.Embed(title=queue_for.format(self.VoiceChannel.name))
             i = 0
             for element in self.queue[0:10]:
-                embed.add_field(name="№%s" % str(i + 1), value = element[1], inline = False)
+                embed.add_field(name=queue_title.format(str(i + 1), tchannel.guild.get_member(element[4]).name), value = element[1], inline = False)
                 i += 1
         print(tchannel)
         await tchannel.send(embed=embed)
 
     async def pause(self, data):
-        vc_id, tc_id, msg = data
+        vc_id, tc_id, userid, msg = data
         tchannel = client.get_channel(tc_id)
         self.VoiceClient.pause()
-        await tchannel.send(msg.format(self.VoiceChannel.name))
+        await tchannel.send(msg.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
 
     async def resume(self, data):
-        vc_id, tc_id, msg = data
+        vc_id, tc_id, userid, msg = data
         tchannel = client.get_channel(tc_id)
         self.VoiceClient.resume()
-        await tchannel.send(msg.format(self.VoiceChannel.name))
+        await tchannel.send(msg.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
 
     async def skip(self, data):
-        vc_id, tc_id, msg, errormsg = data
-        tchannel = self.get_channel(tc_id)
+        vc_id, tc_id, userid, msg, errormsg = data
+        tchannel = client.get_channel(tc_id)
         if self.VoiceClient.is_playing():
             self.VoiceClient.stop()
-            if queue[0] is not None:
-                await tchannel.send(msg.format(queue[0][1], self.VoiceChannel.name))
+            if self.queue[0] is not None:
+                await tchannel.send(msg.format(self.queue[0][1], self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
             else:
-                await tchannel.send(msg.format("a song", self.VoiceChannel.name))
+                await tchannel.send(msg.format("a song", self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
         else:
             await tchannel.send(errormsg)
-    
-    async def shuffle(self, data):
+
+    async def shufflen(self, data):
+        vc_id, tc_id, userid, msg = data
         tchannel = client.get_channel(tc_id)
-        vc_id, tc_id, msg, errormsg = data
+        self.shuffle = not self.shuffle
+        await tchannel.send(msg.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
+    
+    async def shuffleq(self, data):
+        vc_id, tc_id, userid, msg, errormsg = data
+        tchannel = client.get_channel(tc_id)
         x = [self.queue[0]]
-        self.queue.remove(queue[0])
+        self.queue.remove(self.queue[0])
         while len(self.queue) > 0:
             i = randint(0, len(self.queue)-1)
             x.append(self.queue[i])
             self.queue.remove(self.queue[i])
         self.queue.extend(x)
-        if len(queue) > 1:
-            await tchannel.send(msg.format(self.VoiceChannel.name))
+        if len(self.queue) > 1:
+            await tchannel.send(msg.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
         else:
             await tchannel.send(errormsg)
 
     async def stop(self, data):
-        vc_id, tc_id, msg = data
+        vc_id, tc_id, userid, msg = data
         tchannel = client.get_channel(tc_id)
         await self.VoiceClient.disconnect()
-        await tchannel.send(msg.format(self.VoiceClient.name))
+        await tchannel.send(msg.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
 
-    async def repeat(self, data):
-        vc_id, tc_id, msg, msgQ, errormsg = data
+    async def repeatf(self, data):
+        vc_id, tc_id, state, userid, msg, msgQ, msgE, msgD = data
         tchannel = client.get_channel(tc_id)
+        if self.repeat == state + 1:
+            self.repeat = 0
+            await tchannel.send(msgD.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
+        elif self.queue[0] is not None:  
+            self.repeat = state + 1
+            if self.repeat == 1:
+                await tchannel.send(msg.format(self.queue[0][1], self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
+            elif self.repeat == 2:
+                await tchannel.send(msgQ.format(self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
+        else:
+            await tchannel.send(msg.format(self.queue[0][1], self.VoiceChannel.name, tchannel.guild.get_member(userid).mention))
 voice_clients = []
 async def connect(voice_channel_id):
     channel = client.get_channel(voice_channel_id)
@@ -143,14 +202,17 @@ async def resumeCallback(data, bconn):
 async def skipCallback(data, bconn):
     client.loop.create_task(generalFunc("skip", data))
 
-async def shuffleCallback(data, bconn):
-    client.loop.create_task(generalFunc("shuffle", data))
+async def shufflenCallback(data, bconn):
+    client.loop.create_task(generalFunc("shufflen", data))
     
+async def shuffleqCallback(data, bconn):
+    client.loop.create_task(generalFunc("shuffleq", data))
+
 async def stopCallback(data, bconn):
     client.loop.create_task(generalFunc("stop", data))
 
 async def repeatCallback(data, bconn):
-    client.loop.create_task(generalFunc("repeat", data))
+    client.loop.create_task(generalFunc("repeatf", data))
 
 
     
@@ -158,24 +220,12 @@ async def queueHandler():
     global conn
     while True:
         for vclient in voice_clients:
-            print(vclient.queue)
             if not vclient.VoiceClient.is_connected():
                 conn.POST(0, [vclient.VoiceChannel.id])
                 voice_clients.remove(vclient)
                 continue
             if not vclient.VoiceClient.is_paused():
-                if vclient.VoiceClient.is_playing():
-                    vclient.timestamp = time()
-                elif len(vclient.queue) == 1:
-                    vclient.queue[0] = None
-                elif len(vclient.queue) > 1:
-                    print('b)')
-                    song = vclient.queue[1]
-                    print(song)
-                    vclient.queue.remove(vclient.queue[0])
-                    vclient.ffmpeg = discord.FFmpegPCMAudio(song[0])
-                    vclient.VoiceClient.play(vclient.ffmpeg)
-                    await client.get_channel(song[2]).send(song[3].format(song[1]))
+                await vclient.update()
                 if time() - vclient.timestamp > 120:
                     conn.POST(0, [vclient.VoiceChannel.id])
                     voice_clients.remove(vclient)
@@ -188,7 +238,7 @@ async def queueHandler():
                 print(vclient.VoiceChannel)
                 print(vclient.VoiceClient.channel.id)
                 try:
-                    vclient.VoiceClient.move_to(vclient.VoiceChannel)
+                    await vclient.VoiceClient.move_to(vclient.VoiceChannel)
                 except:
                     voice_clients.remove(vclient)
         await asyncio.sleep(1)
@@ -211,6 +261,7 @@ async def on_ready():
     conn = bconn(sock, callbacks = [[get_user_id, 0], [guilds_list, 1], 
                                     [connectCallback, 0x100], [playCallback, 0x101], [queueCallback, 0x102], 
                                     [pauseCallback, 0x103], [resumeCallback, 0x104], [skipCallback, 0x105],
-                                    [shuffleCallback, 0x106], [stopCallback, 0x107], [repeatCallback, 0x108]])
+                                    [shufflenCallback, 0x106], [shuffleqCallback, 0x107], [stopCallback, 0x108], 
+                                    [repeatCallback, 0x109]])
 client.loop.create_task(queueHandler())
 client.run(sys.argv[1])
