@@ -116,7 +116,7 @@ import asyncio
 from random import randint
 import time
 class bconn:
-    
+    dead = False
     def __init__(self, conn, additional_types = [], callbacks = []):
         self.pc = PackageCreator(additional_types)
         self.conn = conn
@@ -161,24 +161,28 @@ class bconn:
     async def update(self):
         while True:
             print('update')
-            r = self.pc.from_bytes(self.conn)
-            print(r)
+            try:
+                r = self.pc.from_bytes(self.conn)
+                print(r)
 
-            if r.type == 2:
-                self.get_responses.update({r.salt:r.data})
-            elif r.type == 1:
-                flag = False
-                for callback, code in self.callbacks:
-                    if code == r.code:
-                        response = await callback(r.data, self)
-                        if response is None:
-                            response = []
-                        self.conn.send(self.pc.create(code, response, r.salt, 2).to_bytes())
-                        flag = True
-                        break
-                if not flag:
-                    self.conn.send(self.pc.create(r.code, [], r.salt, 2).to_bytes())
-            elif r.type == 0:
-                for callback, code in self.callbacks:
-                    if code == r.code:
-                        await callback(r.data, self)
+                if r.type == 2:
+                    self.get_responses.update({r.salt:r.data})
+                elif r.type == 1:
+                    flag = False
+                    for callback, code in self.callbacks:
+                        if code == r.code:
+                            response = await callback(r.data, self)
+                            if response is None:
+                                response = []
+                            self.conn.send(self.pc.create(code, response, r.salt, 2).to_bytes())
+                            flag = True
+                            break
+                    if not flag:
+                        self.conn.send(self.pc.create(r.code, [], r.salt, 2).to_bytes())
+                elif r.type == 0:
+                    for callback, code in self.callbacks:
+                        if code == r.code:
+                            await callback(r.data, self)
+            except:
+                self.dead = True
+                await asyncio.sleep(60)
