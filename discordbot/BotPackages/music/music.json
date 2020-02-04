@@ -6,9 +6,20 @@
     "helpDescription": "",
     "description": "Package with commands for music bot",
     "channelNotFound": "You're not connected to any channel",
-    "playing": "Now playing {}",
+    "play": "Now playing {}",
+    "playQueue": "Added {} to queue",
     "nothingIsPlaying": "Nothing is playing in your channel.",
-    "queueFor":  "Queue for {}"
+    "queueFor": "Queue for {}",
+    "pause": "Queue in {} is paused",
+    "resume": "Queue in {} is resumed",
+    "skip": "Skipping {} in {}",
+    "skipError": "Nothing is playing in your channel",
+    "shuffle": "Shuffling queue in {}",
+    "shuffleError": "Nothins is playing in your channel",
+    "stop": "Stopping bot in {}",
+    "repeat": "Repeating {} in {}",
+    "repeatQueue": "Repeating queue in {}",
+    "repeatError": "Nothing is playing in your channel"
   },
   "Russian": {
     "language": "Русский",
@@ -17,8 +28,17 @@
     "helpDescription": "",
     "description": "Package with commands for music bot",
     "channelNotFound": "You're not connected to any channel",
-    "playing": "Сейчас играет {}",
+    "play": "Сейчас играет {}",
+    "playQueue": "Added {} to queue",
     "nothingIsPlaying": "Nothing is playing in your channel.",
-    "queueFor": "Queue for {}"
+    "queueFor": "Queue for {}",
+    "pause": "Queue in {} is paused",
+    "resume": "Queue in {} is resumed",
+    "skip": "Skipping {} in {}",
+    "shuffle": "Shuffling queue in {}",
+    "stop": "Stopping bot in {}",
+    "repeat": "Repeating {} in {}",
+    "repeatQueue": "Repeating queue in {}",
+    "repeatError": "Nothing is playing in your channel"
   }
 }
