@@ -64,24 +64,18 @@ class PackageCreator:
         print("waiting for data")
         code = connRef.recv(2)
         data.extend(code)
-        print(data)
         x.code = int.from_bytes(code,byteorder='big')
         salt = connRef.recv(2)
         data.extend(salt)
-        print(data)
         x.salt = int.from_bytes(salt,byteorder='big')
         type = connRef.recv(1)
         data.extend(type)
-        print(data)
         x.type = int.from_bytes(type,byteorder='big')
         x.data = []
         while True:
             tb = connRef.recv(1)
             data.extend(tb)
-            print(data)
             type = 254 - int.from_bytes(tb, byteorder='big')
-            print(type)
-            print(self.available_types[type])
             if type == -1:
                 break
             if type > len(self.available_types):
@@ -108,8 +102,6 @@ class PackageCreator:
                 recvdata = connRef.recv(lenstr)
                 data.extend(recvdata)
                 x.data.append(self.available_types[type].from_bytes(recvdata))
-        print(data)
-        print(x)
         return x
 from threading import Thread
 import asyncio
@@ -148,7 +140,6 @@ class bconn:
         self.salts.append(salt)
         pckg = self.pc.create(code,data,salt, 1)
         self.conn.send(pckg.to_bytes())
-        print(data)
         while True:
             await asyncio.sleep(delay)
             if salt in self.get_responses:
@@ -185,4 +176,4 @@ class bconn:
                             await callback(r.data, self)
             except:
                 self.dead = True
-                await asyncio.sleep(60)
+                return
