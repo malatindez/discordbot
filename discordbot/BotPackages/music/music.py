@@ -51,7 +51,8 @@ class Package(package.Package):
     def getCommands(self): 
         return [["help", self.help], ["play", self.play], ["queue", self.queueF],
                 ["pause", self.pause], ["resume", self.resume], ["skip", self.skip],
-                ["shuffle", self.shuffle], ["stop", self.stop], ["repeat", self.repeat]]
+                ["shuffleq", self.shuffleq], ["shuffle", self.shuffle],["stop", self.stop],
+                ["repeat", self.repeat]]
     
     def getUpdateFunctions(self):
         return [self.initNetwork]
@@ -59,6 +60,7 @@ class Package(package.Package):
     # data == [voice_channel]
     # code - 0
     async def UVC(self, data, conn):
+        print('uvc called')
         await self.lock.acquire()
         for g_id in conn.gvc_ids.keys():
             if conn.gvc_ids[g_id] == data[0]:
@@ -173,7 +175,7 @@ class Package(package.Package):
                 return
             await asyncio.sleep(1)
             itr += 1
-        connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'], r['title'], 
+        connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'], r['title'], message.author.id, 
                         self.getText(message.guild.id, message.channel.id, "play"),
                         self.getText(message.guild.id, message.channel.id, "playQueue")])
     async def doStuff(self, message):
@@ -190,35 +192,47 @@ class Package(package.Package):
         VoiceChannel, connection = await self.doStuff(message)
         connection.POST(0x102, [VoiceChannel.id, message.channel.id, 
                                 self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
-                                self.getText(message.guild.id, message.channel.id, "queueFor")])
+                                self.getText(message.guild.id, message.channel.id, "queueFor"),
+                                self.getText(message.guild.id, message.channel.id, "queueTitle")])
 
     async def pause(self, params, message, core):
         VoiceChannel, connection = await self.doStuff(message)
-        connection.POST(0x103, [VoiceChannel.id, message.channel.id, 
+        connection.POST(0x103, [VoiceChannel.id, message.channel.id, message.author.id, 
                                 self.getText(message.guild.id, message.channel.id, "pause")])
     async def resume(self, params, message, core):
         VoiceChannel, connection = await  self.doStuff(message)
-        connection.POST(0x104, [VoiceChannel.id, message.channel.id, 
+        connection.POST(0x104, [VoiceChannel.id, message.channel.id, message.author.id, 
                                 self.getText(message.guild.id, message.channel.id, "resume")])
     async def skip(self, params, message, core):
         VoiceChannel, connection = await  self.doStuff(message)
-        connection.POST(0x105, [VoiceChannel.id, message.channel.id, 
+        connection.POST(0x105, [VoiceChannel.id, message.channel.id, message.author.id,
                                 self.getText(message.guild.id, message.channel.id, "skip"),
                                 self.getText(message.guild.id, message.channel.id, "skipError")])
     async def shuffle(self, params, message, core):
         VoiceChannel, connection = await  self.doStuff(message)
-        connection.POST(0x106, [VoiceChannel.id, message.channel.id, 
-                                self.getText(message.guild.id, message.channel.id, "shuffle"),
-                                self.getText(message.guild.id, message.channel.id, "shuffleError")])
+        connection.POST(0x106, [VoiceChannel.id, message.channel.id, message.author.id,
+                                self.getText(message.guild.id, message.channel.id, "shuffle")])
+    async def shuffleq(self, params, message, core):
+        VoiceChannel, connection = await  self.doStuff(message)
+        connection.POST(0x107, [VoiceChannel.id, message.channel.id, message.author.id,
+                                self.getText(message.guild.id, message.channel.id, "shuffleq"),
+                                self.getText(message.guild.id, message.channel.id, "shuffleqError")])
     async def stop(self, params, message, core):
         VoiceChannel, connection = await  self.doStuff(message)
         await self.UVC([VoiceChannel.id], connection)
-        connection.POST(0x107, [VoiceChannel.id, message.channel.id, 
+        connection.POST(0x108, [VoiceChannel.id, message.channel.id, message.author.id,
                                 self.getText(message.guild.id, message.channel.id, "stop")]) 
     async def repeat(self, params, message, core):
         VoiceChannel, connection = await  self.doStuff(message)
-        await self.UVC([VoiceChannel.id], connection)
-        connection.POST(0x108, [VoiceChannel.id, message.channel.id, 
+        state = 0
+        if len(params) != 0:
+            if params[0] == "all":
+                state = 1
+            else:
+                await message.channel.send(self.getText(message.guild.id, message.channel.id, "repeatError"))
+                return
+        connection.POST(0x109, [VoiceChannel.id, message.channel.id,  state, message.author.id,
                                 self.getText(message.guild.id, message.channel.id, "repeat"),
                                 self.getText(message.guild.id, message.channel.id, "repeatQueue"),
-                                self.getText(message.guild.id, message.channel.id, "repeatError")]) 
+                                self.getText(message.guild.id, message.channel.id, "repeatEnabled"),
+                                self.getText(message.guild.id, message.channel.id, "repeatDisabled")]) 
