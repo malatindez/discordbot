@@ -50,7 +50,9 @@ class PackageCreator:
         if not isinstance(typep, int):
             raise ValueError
         for i in data:
-            if type(i) not in self.available_types:
+            if i is None:
+                data[data.index(i)] = 0
+            elif type(i) not in self.available_types:
                 raise ValueError
         req.code = code
         req.data = data
@@ -162,7 +164,12 @@ class bconn:
                     flag = False
                     for callback, code in self.callbacks:
                         if code == r.code:
-                            response = await callback(r.data, self)
+                            response = None
+                            try:
+                                response = await callback(r.data, self)
+                            except Exception as e:
+                                print(str(e) + " Occured in musicNetwork")
+
                             if response is None:
                                 response = []
                             self.conn.send(self.pc.create(code, response, r.salt, 2).to_bytes())
@@ -173,7 +180,11 @@ class bconn:
                 elif r.type == 0:
                     for callback, code in self.callbacks:
                         if code == r.code:
-                            await callback(r.data, self)
-            except:
+                            try:
+                                await callback(r.data, self)
+                            except Exception as e:
+                                print(str(e) + " Occured in musicNetwork")
+            except Exception as e:
+                print(e)
                 self.dead = True
                 return
