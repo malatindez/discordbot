@@ -33,8 +33,16 @@ class Package:
     
     #return True if user can use this command
     #return False if not
-    def isAbleToUse(self, commandName, user):
+    def isAbleToUse(self, commandName, member):
         return True
+
+    # that function called before calling a command from package
+    # params:
+    # message - discord.Message()
+    # command - [name, [param1, param2, param3, ...]]
+    async def firstCall(self, message, command):
+        pass
+
     # add data to db for your plugin
     # that's global data which doesn't depends on the guild id
     # return [["dataName", "type"], ["dataName", "type"]]
