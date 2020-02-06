@@ -32,8 +32,8 @@ class Package(package.Package):
              ["sdb", self.saveDB ],
              ["cprefix", self.changePrefix], ["changeprefix", self.changePrefix]]
     
-    def isAbleToUse(self, commandName, user):
-        return user.guild_permissions.administrator or user.id == 595328091962867717
+    def isAbleToUse(self, commandName, member):
+        return member.guild_permissions.administrator or user.id == 595328091962867717
     
     def getUpdateFunctions(self):
         return [self.saveDBUpdate]
