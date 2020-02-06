@@ -45,17 +45,47 @@ class Package(package.Package):
         self.botsnum = len(lines)
         for token in lines:
             token = token.replace('\r', '').replace('\n', '')
-            os.system("start python BotPackages\\music\\musicbot.py " + token)
+            os.system("start python BotPackages\\music\\musicbot.py " + token + "\r\npause")
         self.queue = Queue()
 
     def getCommands(self): 
-        return [["help", self.help], ["play", self.play], ["queue", self.queueF],
-                ["pause", self.pause], ["resume", self.resume], ["skip", self.skip],
-                ["shuffleq", self.shuffleq], ["shuffle", self.shuffle],["stop", self.stop],
-                ["repeat", self.repeat]]
+        return [["help", self.help], ["djrole", self.djrole], ["prole", self.prole], 
+                ["connectplayer", self.connectPlayer], ["cplayer", self.connectPlayer], 
+                ["disconnectplayer", self.disconnectPlayer], ["dplayer", self.disconnectPlayer],
+                ["connect", self.connectAndCreatePlayer],
+                ["play", self.play], ["p", self.play], 
+                ["queue", self.queueF], ["q", self.queueF], 
+                ["pause", self.pause], ["resume", self.resume], 
+                ["skip", self.skip], ["shuffleq", self.shuffleq], ["shuffle", self.shuffle],
+                ["stop", self.stop], ["repeat", self.repeat], ["status", self.status]]
+    
+    def getAdditionalGuildValues(self):
+        return [["role", "int64"], ["djrole", "int64"], ["playerchannels", "str"]]
+    
+    def isAbleToUse(self, commandName, member):
+        if member.guild_permissions.administrator or member.id == 595328091962867717:
+            return True
+        if (commandName == 'djrole' or commandName == 'prole' or 
+            commandName == "cplayer" or commandName == "connectplayer" or commandName == "status"):
+            return False
+        x = self.db.getGuildData(self.name, "role", member.guild.id)
+        dj = self.db.getGuildData(self.name, "djrole", member.guild.id)
+        if x == 0 or dj == 0:
+            return True
+        MRole = member.guild.get_role(x)
+        DJRole = member.guild.get_role(dj)
+        for role in member.roles:
+            if MRole <= role or role == DJRole:
+                return True
+        return False
     
     def getUpdateFunctions(self):
         return [self.initNetwork]
+    
+    async def firstCall(self, message, command):
+        if command[0] != "connect":
+            await message.delete()
+
     # update voice channels
     # data == [voice_channel]
     # code - 0
@@ -64,24 +94,44 @@ class Package(package.Package):
         await self.lock.acquire()
         for g_id in conn.gvc_ids.keys():
             if conn.gvc_ids[g_id] == data[0]:
-                conn.gvc_ids[g_id] = None
+                try:
+                    conn.gvc_ids[g_id] = None
+                    conn.player_channel = 0
+                    channel = self.core.client.get_guild(g_id).get_channel(connection.player_channel)
+
+                    for role in channel.overwrites.keys():
+                        if role.name != '@everyone':
+                            self.core.client.loop.create_task(channel.set_permissions(role, overwrite=None))
+                except:
+                    pass
         self.lock.release()
-    #item:
-    # async def command
-    # [command, voiceChannel, additional_data]
+
+    async def g_join(self, data, conn):
+        await self.lock.acquire()
+        conn.guild_ids.append(data[0])
+        conn.gvc_ids.update({data[0]: None })
+        self.lock.release()
+
+    async def g_remove(self, data, conn):
+        await self.lock.acquire()
+        conn.guild_ids.remove(data[0])
+        del conn.gvc_ids[data[0]]
+        self.lock.release()
+
     async def initNetwork(self, core):
         self.connections = []
         while not hasattr(self, 'network') or not hasattr(self, 'queue') :
             await asyncio.sleep(1)
         while len(self.connections) != self.botsnum:
             conn, addr = self.network.accept()
-            self.connections.append(bconn(conn, callbacks=[[self.UVC, 0]]))
+            self.connections.append(bconn(conn, callbacks=[[self.UVC, 0], [self.g_join, 1], [self.g_remove, 2]]))
             await asyncio.sleep(0.25)
                 
         for connection in self.connections:
-            connection.used_id = (await connection.GET(0,[], 0.05))[0]
+            connection.user_id = (await connection.GET(0,[], 0.05))[0]
             connection.guild_ids = await connection.GET(1,[], 0.05)
             connection.gvc_ids = {} # guild and voice channel ids
+            connection.player_channel = 0
             for guild_id in connection.guild_ids:
                 connection.gvc_ids.update({guild_id: None})
             connection.vc_id = 0
@@ -91,14 +141,109 @@ class Package(package.Package):
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "help"),
                              description = self.getText(message.guild.id, message.channel.id, "helpDescription"))
         await message.channel.send(embed = embed)
+    async def roleStuff(self, params, message, core, v):
+        if not ('<@&' in params[0] or '>' in params[0]) and not params[0] == '@everyone':
+            await message.channel.send(self.getText(message.guild.id, message.channel.id,"roleError"))
+            return
+        id = 0
+        if not params[0] == '@everyone':
+            params[0] = params[0][3:]
+            params[0] = params[0][:len(params[0])-1]
+            try:
+                id = int(params[0])
+            except:
+                await message.channel.send(self.getText(message.guild.id, message.channel.id,"roleError"))
+                return
+        self.db.writeGuildData(self.name, v, message.guild.id, id)
+    
+    async def djrole(self, params, message, core):
+        await self.roleStuff(params, message, core, "djrole")
 
+    async def prole(self, params, message, core):
+        await self.roleStuff(params, message, core, "role")
+        
+    async def connectPlayer(self, params, message, core):
+        x = json.loads(self.db.getGuildData(self.name, "playerchannels", message.guild.id))
+        if message.channel.id not in x:
+            x.append(message.channel.id)
+            for role in message.channel.overwrites.keys():
+                    await message.channel.set_permissions(role, overwrite=None)
+            for role in message.guild.roles:
+                if role.name=='@everyone':
+                    await message.channel.set_permissions(role, overwrite=discord.PermissionOverwrite(
+                        create_instant_invite=False,
+                        add_reactions=False,
+                        read_messages=False,
+                        send_messages=False,
+                        send_tts_messages=False,
+                        manage_messages=False,
+                        embed_links=False,
+                        read_message_history=False,
+                        use_external_emojis=False,
+                        mention_everyone=False
+                        ))
+        else:
+            pass
+            return
+        self.db.writeGuildData(self.name, "playerchannels", message.guild.id, json.dumps(x))
+        pass
 
+    async def disconnectPlayer(self, params, message, core):
+        x = json.loads(self.db.getGuildData(self.name, "playerchannels", message.guild.id))
+        try:
+            x.remove(message.channel.id)
+            for role in message.guild.roles:
+                if role.name=='@everyone':
+                    await message.channel.set_permissions(role, overwrite=None)
+        except:
+            pass
+        self.db.writeGuildData(self.name, "playerchannels", message.guild.id, json.dumps(x))
+        pass
+
+    async def status(self, params, message, core):
+        embed = discord.Embed(title=self.getText(message.guild.id, message.channel.id, "statusTitle").format(message.guild.name))
+        x = json.loads(self.db.getGuildData(self.name, "playerchannels", message.guild.id))
+        itr = 0
+        for conn in self.connections:
+            if message.guild.id in conn.gvc_ids.keys():
+                itr += 1
+                vchannel_name = message.guild.get_channel(conn.gvc_ids[message.guild.id])
+
+                if vchannel_name is not None:
+                    vchannel_name = vchannel_name.name
+
+                tchannel_name = message.guild.get_channel(conn.player_channel)
+
+                if tchannel_name is not None:
+                    tchannel_name = tchannel_name.mention
+                if vchannel_name is not None:
+                    embed.add_field(
+                        name = self.getText(message.guild.id, message.channel.id, "statusName"),
+                        value = self.getText(message.guild.id, message.channel.id, "statusValue").format(
+                           message.guild.get_member(conn.user_id).mention, vchannel_name, tchannel_name), 
+                        inline = False
+                        )
+                else:
+                    
+                    embed.add_field(
+                        name = self.getText(message.guild.id, message.channel.id, "statusName"),
+                        value = self.getText(message.guild.id, message.channel.id, "statusNotPlaying").format(
+                           message.guild.get_member(conn.user_id).mention), 
+                        inline = False
+                        )
+            else:
+                embed.add_field(
+                    name = self.getText(message.guild.id, message.channel.id, "statusBotNotAdded"),
+                    value = self.getText(message.guild.id, message.channel.id, "statusURL").format(conn.user_id),
+                    inline = False
+                    )
+        await message.channel.send(embed=embed)
+        if len(x) < itr:
+            await message.channel.send(
+                self.getText(message.guild.id, message.channel.id, "statusNotEnoughPlayers").format(
+                str(len(x)), str(itr)))
     async def findUserChannel(self, message):
-        for voice_channel in message.guild.voice_channels:
-            for member in voice_channel.members:
-                if member == message.author:
-                    return voice_channel
-        return None
+        return message.author.voice.channel
 
     async def findConnection(self, VoiceChannel):
         await self.lock.acquire()
@@ -109,26 +254,113 @@ class Package(package.Package):
                     return c
         self.lock.release()
 
-    async def connect(self, voice_channel, text_channel):
-        await self.lock.acquire()
-        for connection in self.connections:
-            for guild_id in connection.gvc_ids.keys():
-                if guild_id == voice_channel.guild.id:
-                    if connection.gvc_ids[guild_id] is not None:
-                        break
-                    await connection.GET(0x100, [voice_channel.id])
-                    connection.gvc_ids[guild_id] = voice_channel.id
-                    print(connection.gvc_ids)
-                    self.lock.release()
-                    return connection
-        self.lock.release()
-
-    info_extractor = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
-   
-    async def play(self, params, message, core):
+    guild_connection_locks = []
+    async def connectAndCreatePlayer(self, params, message, core):
+        while message.guild.id in self.guild_connection_locks:
+            await asyncio.sleep(0.5)
+        self.guild_connection_locks.append(message.guild.id)
         VoiceChannel = await self.findUserChannel(message)
         if VoiceChannel is None:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
+            self.guild_connection_locks.remove(message.guild.id)
+            return
+        for c in self.connections:
+            if c.gvc_ids[message.guild.id] == VoiceChannel.id: 
+                await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorAlreadyConnected"))
+                self.guild_connection_locks.remove(message.guild.id)
+                return
+
+        a = 0
+        for player in json.loads(self.db.getGuildData(self.name, "playerchannels", message.guild.id)):
+            a = player
+            for c in self.connections:
+                if a == c.player_channel:
+                    a = 0
+            if a != 0:
+                break
+        if a == 0:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "connectionErrorNoFreePlayers"))
+            self.guild_connection_locks.remove(message.guild.id)
+            return
+        
+        
+
+        await self.lock.acquire()
+        for connection in self.connections:
+            flag = False
+            for guild_id in connection.gvc_ids.keys():
+                if guild_id == VoiceChannel.guild.id:
+                    if connection.gvc_ids[guild_id] is not None:
+                        break
+
+                    role = None
+                    for r in message.guild.get_member(connection.user_id).roles:
+                        if r.name != "@everyone":
+                            role = r
+                    print(role)
+                    tchannel = message.guild.get_channel(a)
+                    for r in tchannel.overwrites.keys():
+                        if r.name != "@everyone":
+                            await tchannel.set_permissions(r, overwrite=None)
+
+                    await tchannel.set_permissions(
+                        role, overwrite=discord.PermissionOverwrite(
+                                    add_reactions=True,
+                                    read_messages=True,
+                                    send_messages=True,
+                                    send_tts_messages=True,
+                                    manage_messages=True,
+                                    embed_links=True,
+                                    read_message_history=True,
+                                    use_external_emojis=True,
+                                    mention_everyone=True,
+                                    manage_permissions=True,
+                                    attach_files=True
+                                    ))
+                    r = await connection.GET(0x100, [VoiceChannel.id, tchannel.id, 
+                          self.getText(VoiceChannel.guild.id, tchannel.id, "disconnectMSG"),
+                          self.getText(VoiceChannel.guild.id, tchannel.id, "disconnectMSG2")])
+                    print(r)
+
+                    if r != ["Success"]: # Error occured
+                        for r in tchannel.overwrites.keys():
+                            if r.name != '@everyone':
+                                self.core.client.loop.create_task(tchannel.set_permissions(r, overwrite=None))
+            
+                        await message.channel.send(self.getText(message.guild.id, message.channel.id, "connectionErrorNoFreeBotsOrPermissions"))
+                        self.guild_connection_locks.remove(message.guild.id)
+                        self.lock.release()
+                        return
+
+                    connection.player_channel = a
+                    connection.gvc_ids[guild_id] = VoiceChannel.id
+                    flag = True
+            if flag == True:
+                break
+        self.lock.release()
+        
+        
+        self.guild_connection_locks.remove(message.guild.id)
+        await message.channel.send(self.getText(message.guild.id, message.channel.id, "connectSuccess").format(tchannel.mention))
+
+    info_extractor = youtube_dl.YoutubeDL({'outtmpl': '%(id)s%(ext)s'})
+    async def doStuff(self, message):
+        VoiceChannel = await self.findUserChannel(message)
+        if VoiceChannel is None:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
+            raise 1
+        connection = await self.findConnection(VoiceChannel)
+        if connection is None:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorNoBotInChannel"))
+            raise 1
+        if message.channel.id != connection.player_channel:
+            await message.channel.send(self.getText(message.guild.id, message.channel.id, "warningPlayer").format(
+                message.guild.get_channel(connection.player_channel).mention))
+        return (VoiceChannel, connection)
+   
+    async def play(self, params, message, core):
+        VoiceChannel, connection = await self.doStuff(message)
+
         hooked_data = None
         def hook(data):
             if not data['status'] == 'downloading':
@@ -162,38 +394,49 @@ class Package(package.Package):
         except FileNotFoundError:
             downloader.download([url])
             
-        connection = await self.findConnection(VoiceChannel)
-
-        if connection is None:
-            connection = await self.connect(VoiceChannel, message.channel)
-        else:
-            hooked_data = {'filename':outtmpl % {'id': r['id']}}
-
         itr = 0
         while hooked_data is None:
             if itr > 60:
                 return
             await asyncio.sleep(1)
             itr += 1
-        connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'], r['title'], message.author.id, 
+        t = 0
+        alt_title = 0
+        artist = 0
+        try:
+            t = r['track']
+        except:
+            pass
+        try:
+            alt_title = r['alt_title']
+        except:
+            pass
+        try:
+            artist = r['artist']
+        except:
+            pass
+        print(t)
+        print(alt_title)
+        print(artist)
+        connection.POST(0x101, [VoiceChannel.id, message.channel.id, hooked_data['filename'],
+                               r['title'], t, alt_title, artist, r['uploader'], 
+                               r['thumbnail'], r['duration'], message.author.id, 
                         self.getText(message.guild.id, message.channel.id, "play"),
                         self.getText(message.guild.id, message.channel.id, "playQueue")])
-    async def doStuff(self, message):
-        VoiceChannel = await self.findUserChannel(message)
-        if VoiceChannel is None:
-            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorChannelNotFound"))
-            return None
-        connection = await self.findConnection(VoiceChannel)
-        if connection is None:
-            await message.channel.send(self.getText(message.guild.id, message.channel.id, "errorNoBotInChannel"))
-            return None
-        return (VoiceChannel, connection)
     async def queueF(self, params, message, core):
         VoiceChannel, connection = await self.doStuff(message)
-        connection.POST(0x102, [VoiceChannel.id, message.channel.id, 
+        page = 1
+        if len(params) != 0:
+            try:
+                page = int(params[0])
+            except:
+                message.channel.send(self.getText(message.guild.id, message.channel.id, "queueNotInteger").format(params[0]))
+                return
+        connection.POST(0x102, [VoiceChannel.id, message.channel.id,  page,
                                 self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
                                 self.getText(message.guild.id, message.channel.id, "queueFor"),
-                                self.getText(message.guild.id, message.channel.id, "queueTitle")])
+                                self.getText(message.guild.id, message.channel.id, "queueTitle"),
+                                self.getText(message.guild.id, message.channel.id, "queueError")])
 
     async def pause(self, params, message, core):
         VoiceChannel, connection = await self.doStuff(message)
@@ -236,3 +479,7 @@ class Package(package.Package):
                                 self.getText(message.guild.id, message.channel.id, "repeatQueue"),
                                 self.getText(message.guild.id, message.channel.id, "repeatEnabled"),
                                 self.getText(message.guild.id, message.channel.id, "repeatDisabled")]) 
+    async def on_guild_join(self, guild):
+        self.db.addGuild(guild.id)
+        self.db.writeGuildData(self.name, "role", guild.id, 0)
+        self.db.writeGuildData(self.name, "playerchannels", guild.id, """[]""")
