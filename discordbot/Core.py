@@ -95,7 +95,9 @@ class Core:
         # Пропуск сообщений, отправляемых ботом.
         if(message.author == core.client.user):
             return
-        
+        # Пропуск картинок и однобуквенных сообщений
+        if len(message.content) <= 1:
+            return
         # Получаем данные в базе данных о гильдии, в которой было написано это сообщение.
         
         prefix = 0
@@ -122,10 +124,7 @@ class Core:
                 for PCommand in plugin.getCommands():
                     if PCommand[0] == command[0]:
                         if plugin.isAbleToUse(PCommand[1], message.author):
-                            try:
-                                await message.delete()
-                            except:
-                                pass
+                            await plugin.firstCall(message, command)
                             await PCommand[1](command[1], message, core)
                         return
 
