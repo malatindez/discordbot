@@ -1,4 +1,4 @@
-
+import json
 class Package:
     def __getitem__(self, index):
         return self.data[index]
@@ -9,27 +9,23 @@ class Package:
         b.extend(self.type.to_bytes(1, byteorder='big'))
         for var in self.data:
             for t in self.available_types:
-                id = (254-self.available_types.index(t))
-                if t == int == type(var):
-                    b.extend(id.to_bytes(1,byteorder='big'))
-                    b.extend(var.to_bytes(8,byteorder='big'))
-                    break
-                elif t == type(var) == bool:
-                    b.extend(id.to_bytes(1,byteorder='big'))
-                    b.extend(var.to_bytes(1,byteorder='big'))
-                    break
-                elif t == type(var) == str:
-                    b.extend(id.to_bytes(1,byteorder='big'))
-                    encoded = var.encode('utf-8')
+                def saveBytes(encoded):
                     b.extend(len(encoded).to_bytes(2,byteorder='big'))
                     b.extend(encoded)
-                    break
-                elif t == type(var):
+                id = (254-self.available_types.index(t))
+                if t == type(var):
                     b.extend(id.to_bytes(1,byteorder='big'))
-                    val = var.to_bytes()
-                    b.extend(len(val).to_bytes(2,byteorder='big'))
-                    b.extend(val)
-                    
+                    if t == int:
+                        b.extend(var.to_bytes(8,byteorder='big'))
+                    elif t == bool:
+                        b.extend(var.to_bytes(1,byteorder='big'))
+                    elif t == str:
+                        saveBytes(var.encode('utf-8'))
+                    elif t == dict or t == list:
+                        saveBytes(json.dumps(var).encode('utf-8'))
+                    else:
+                        saveBytes(var.to_bytes())
+                    break
         b.extend((255).to_bytes(1,byteorder='big'))
         return b
     def __str__(self):
@@ -39,7 +35,7 @@ class PackageCreator:
     # each type must have to_bytes() and static from_bytes(bytearray) functions
     def __init__(self, additional_types):
         self.available_types.extend(additional_types)
-    available_types = [int, bool, str]
+    available_types = [int, bool, str, dict, list]
     def create(self, code, data, salt = 0, typep = 0):
         req = Package()
         req.available_types = self.available_types
@@ -65,50 +61,43 @@ class PackageCreator:
         data = bytearray()
         print("waiting for data")
         code = connRef.recv(2)
-        data.extend(code)
         x.code = int.from_bytes(code,byteorder='big')
         salt = connRef.recv(2)
-        data.extend(salt)
         x.salt = int.from_bytes(salt,byteorder='big')
         type = connRef.recv(1)
-        data.extend(type)
         x.type = int.from_bytes(type,byteorder='big')
         x.data = []
+        def getData():
+            lenstring = connRef.recv(2)
+            lenstr = int.from_bytes(lenstring, byteorder='big')
+            return connRef.recv(lenstr)
         while True:
             tb = connRef.recv(1)
             data.extend(tb)
             type = 254 - int.from_bytes(tb, byteorder='big')
+            print(type)
             if type == -1:
                 break
             if type > len(self.available_types):
                 raise ValueError
-            if self.available_types[type] == int: # int
+            if self.available_types[type] == int:
                 integer = connRef.recv(8)
-                data.extend(integer)
                 x.data.append(int.from_bytes(integer, byteorder='big'))
-            elif self.available_types[type] == bool: # bool
+            elif self.available_types[type] == bool:
                 boolean = connRef.recv(1)
-                data.extend(boolean)
                 x.data.append(bool.from_bytes(boolean, byteorder='big'))
-            elif self.available_types[type] == str: # str
-                lenstring = connRef.recv(2)
-                data.extend(lenstring)
-                lenstr = int.from_bytes(lenstring, byteorder='big')
-                string = connRef.recv(lenstr)
-                data.extend(string)
-                x.data.append(string.decode('utf-8'))
+            elif self.available_types[type] == str:
+                x.data.append(getData().decode('utf-8'))
+            elif self.available_types[type] == dict or self.available_types[type] == list:
+                x.data.append(json.loads(getData()))
             else:
-                datalen = connRef.recv(2)
-                data.extend(datalen)
-                lenstr = int.from_bytes(datalen, byteorder='big')
-                recvdata = connRef.recv(lenstr)
-                data.extend(recvdata)
+                recvdata = getData()
                 x.data.append(self.available_types[type].from_bytes(recvdata))
         return x
 from threading import Thread
 import asyncio
 from random import randint
-import time
+from time import time
 class bconn:
     dead = False
     def __init__(self, conn, additional_types = [], callbacks = []):
@@ -135,20 +124,26 @@ class bconn:
         self.conn.send(self.pc.create(code,data).to_bytes())
     
     # GET, TYPE = 1
-    async def GET(self, code, data, delay = 0.25):
+    async def GET(self, code, data, delay = 0.25, timeout = 60):
         salt = randint(1,65535)
         while salt in self.salts:
             salt = randint(1,65535)
         self.salts.append(salt)
         pckg = self.pc.create(code,data,salt, 1)
         self.conn.send(pckg.to_bytes())
+        t = time()
         while True:
+            if time() - t > timeout:
+                print("timeout!")
+                return []
             await asyncio.sleep(delay)
             if salt in self.get_responses:
                 v = self.get_responses[salt]
                 del self.get_responses[salt]
                 self.salts.remove(salt)
                 return v
+            if self.dead:
+                return []
 
     # GET_RESPONSE, TYPE = 2
     async def update(self):
