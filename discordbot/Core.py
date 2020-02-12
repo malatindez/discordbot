@@ -111,6 +111,8 @@ class Core:
         # Если первый символ сообщения не соответствует префиксу, установленному в этой гильдии - return
         for i in range(len(prefix)):
             if prefix[i] != message.content[i]:
+                for plugin in core.plugins:
+                    await plugin.on_message(message)
                 return
 
         enabledPlugins = core.getEnabledPlugins(message)
@@ -127,7 +129,8 @@ class Core:
                             await plugin.firstCall(message, command)
                             await PCommand[1](command[1], message, core)
                         return
-
+        for plugin in core.plugins:
+            await plugin.on_message(message)
     @client.event
     async def on_guild_join(guild):
         for plugin in core.plugins:
