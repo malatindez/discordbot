@@ -40,6 +40,9 @@ class Package(package.Package):
     def __init__(self, core):
         self.name = "r6stats"
         super(Package, self).__init__(core)
+        self.img = Image.open(transformPath("BotPackages\\r6stats\\template.png"))
+        self.imgb = self.img.copy()
+
         self.importance = 0
     def getCommands(self):
         return [["help", self.help], 
@@ -60,6 +63,7 @@ class Package(package.Package):
         await message.channel.send(embed = embed)
     
     async def stats(self, params, message, core):
+        
         prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
         name = ""
         
@@ -69,33 +73,41 @@ class Package(package.Package):
             try:
                 name = self.db.getGlobalUserData(self.name, "r6_player_id", str(message.author.id))
             except:
-                pass
+                name = message.author.nick[:message.author.nick.find(' ') if message.author.nick.find(' ') != -1 else len(message.author.nick)]
         if name == "":
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "statsNDIDB").format(prefix))
             return
         response = requests.get("https://r6.tracker.network/profile/pc/{0}".format(name))
+        userid = None
+        try:
+            userid =json.loads(requests.get("https://r6tab.com/api/search.php?platform=uplay&search={}".format(name)).content)['results'][0]['p_id']
+        except:
+            pass
         x = str(response.content)
         if not response.ok:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "wrongName"))
             return
         def findStat(str):
             a = x.find(str)
-            end1 = x.find("<", a + len(str))
-            end2 = x.find("\\n", a + len(str))
-            return x[a + len(str): a + end1 if end1 < end2 else end2]
+            end1 = x.find("<", a + len(str) + 1)
+            end2 = x.find("\\n", a + len(str) + 1)
+            return x[a + len(str): end1 if end1 < end2 else end2]
         best_mmr = int(findStat('Best MMR Rating</div>\\n<div class="trn-defstat__value">\\n').replace(',',''))
         current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\unranked.png")
-        try:
-            current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\" + getRank(int(findStat('SHIFTING TIDES</div>\\n<div>\\n').replace(',',''))))
-        except:
-            pass
+        stat = findStat('SHIFTING TIDES</div>\\n<div class="trn-text--dimmed">').replace(',','')
+        if stat == 'Unranked':
+            best_mmr = 0    
+        else:
+            s = findStat('<div class="trn-defstat__name">MMR</div>\\n<div class="trn-defstat__value">').replace(',','').replace('\\n','')
+            current_rank = transformPath("BotPackages\\r6stats\\ranks\\big\\" + getRank(int(s)))
+            
         best_rank = transformPath("BotPackages\\r6stats\\ranks\\small\\" + getRank(best_mmr))
         img_cr = Image.open(current_rank)
         img_mr = Image.open(best_rank)
-        img = Image.open(transformPath("BotPackages\\r6stats\\template.png"))
-        img.paste(img_cr, (520, 250))
-        img.paste(img_mr, (280, 920))
-        draw = ImageDraw.Draw(img)
+        
+        self.imgb.paste(img_cr, (520, 250))
+        self.imgb.paste(img_mr, (280, 920))
+        draw = ImageDraw.Draw(self.imgb)
         font32 = ImageFont.truetype(transformPath("BotPackages\\r6stats\\BebasNeue-Bold.otf"), 32)
         font48 = ImageFont.truetype(transformPath("BotPackages\\r6stats\\BebasNeue-Bold.otf"), 48)
         font56 = ImageFont.truetype(transformPath("BotPackages\\r6stats\\BebasNeue-Bold.otf"), 56)
@@ -146,8 +158,10 @@ class Package(package.Package):
         drawText(144, 465, findStat('PVPKDRatio">\\n'), font80)
         drawText(506, 465, findStat('PVPWLRatio">\\n'), font80)
 
-        img.save("tmp.png")
-        await message.channel.send(file=discord.File("tmp.png", filename="tmp.png"))
+        self.imgb.save("r6tmp.png")
+        await message.channel.send(embed=discord.Embed(title='r6tab.com', url="https://r6tab.com/{}".format(userid)))
+        await message.channel.send(file=discord.File("r6tmp.png", filename="r6tmp.png"))
+        self.imgb = self.img.copy()
     async def connect(self, params, message, core):
         prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
         id = ""
