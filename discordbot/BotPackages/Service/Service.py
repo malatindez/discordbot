@@ -42,7 +42,6 @@ class Package(package.Package):
     async def saveDBUpdate(self, core):
         while True:
             try:
-                print("Database was successfully saved!")
                 self.db.commit()
             except:
                 print("error during saving database")
