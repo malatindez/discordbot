@@ -93,6 +93,8 @@ class Package:
         return None
     def post__init__(self):
         pass
+    async def on_message(self, message):
+        pass
     async def on_raw_message_delete(self, payload):
         pass
     async def on_message_edit(self, before, after):
