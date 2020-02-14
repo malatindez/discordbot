@@ -104,7 +104,7 @@ class Core:
         try:
             prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)
         except IndexError:
-            for plugin in core.plugins:
+            for plugin in reversed(core.plugins):
                 await plugin.on_guild_join(message.guild)
             prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)
         prefix = str(prefix)
@@ -132,8 +132,158 @@ class Core:
         for plugin in core.plugins:
             await plugin.on_message(message)
     @client.event
+    async def on_raw_message_delete(payload):
+        for plugin in core.plugins:
+            await plugin.on_raw_message_delete(payload)
+
+    @client.event
+    async def on_message_edit(before, after):
+        for plugin in core.plugins:
+            await plugin.on_message_edit(before, after)
+
+    @client.event
+    async def on_reaction_add(reaction, user):
+        for plugin in core.plugins:
+            await plugin.on_reaction_add(reaction, user)
+
+    @client.event
+    async def on_raw_reaction_add(payload):
+        for plugin in core.plugins:
+            await plugin.on_raw_reaction_add(payload)
+
+    @client.event
+    async def on_reaction_remove(reaction, user):
+        for plugin in core.plugins:
+            await plugin.on_reaction_remove(reaction, user)
+
+    @client.event
+    async def on_raw_reaction_remove(payload):
+        for plugin in core.plugins:
+            await plugin.on_raw_reaction_remove(payload)
+
+    @client.event
+    async def on_reaction_clear(message, reactions):
+        for plugin in core.plugins:
+            await plugin.on_raw_reaction_remove(message, reactions)
+
+    @client.event
+    async def on_raw_reaction_clear(payload):
+        for plugin in core.plugins:
+            await plugin.on_raw_reaction_clear(payload)
+
+    @client.event
+    async def on_private_channel_delete(channel):
+        for plugin in core.plugins:
+            await plugin.on_private_channel_delete(channel)
+
+    @client.event
+    async def on_private_channel_create(channel):
+        for plugin in core.plugins:
+            await plugin.on_private_channel_create(channel)
+
+    @client.event
+    async def on_private_channels_update(before, after):
+        for plugin in core.plugins:
+            await plugin.on_private_channels_update(before, after)
+
+    @client.event
+    async def on_private_channel_pins_update(channel, last_pin):
+        for plugin in core.plugins:
+            await plugin.on_private_channel_pins_update(channel, last_pin)
+
+    @client.event
+    async def on_guild_channel_delete(channel):
+        for plugin in core.plugins:
+            await plugin.on_guild_channel_delete(channel)
+
+    @client.event
+    async def on_guild_channel_create(channel):
+        for plugin in core.plugins:
+            await plugin.on_guild_channel_create(channel)
+
+    @client.event
+    async def on_guild_channel_update(before, after):
+        for plugin in core.plugins:
+            await plugin.on_guild_channel_update(before, after)
+
+    @client.event
+    async def on_guild_channel_pins_update(channel, last_pin):
+        for plugin in core.plugins:
+            await plugin.on_guild_channel_pins_update(channel, last_pin)
+        
+    @client.event
+    async def on_guild_integrations_update(guild):
+        for plugin in core.plugins:
+            await plugin.on_guild_integrations_update(guild)
+
+    @client.event
+    async def on_webhooks_update(channel):
+        for plugin in core.plugins:
+            await plugin.on_webhooks_update(channel)
+
+    @client.event
+    async def on_member_join(member):
+        for plugin in core.plugins:
+            await plugin.on_member_join(member)
+
+    @client.event
+    async def on_member_remove(member):
+        for plugin in core.plugins:
+            await plugin.on_member_remove(member)
+
+    @client.event
+    async def on_member_update(before, after):
+        for plugin in core.plugins:
+            await plugin.on_member_update(before, after)
+
+    @client.event
     async def on_guild_join(guild):
         for plugin in core.plugins:
             await plugin.on_guild_join(guild)
+
+    @client.event
+    async def on_guild_remove(guild):
+        for plugin in core.plugins:
+            await plugin.on_guild_remove(guild)
+
+    @client.event
+    async def on_guild_update(guild):
+        for plugin in core.plugins:
+            await plugin.on_guild_update(guild)
+
+    @client.event
+    async def on_guild_role_create(role):
+        for plugin in core.plugins:
+            await plugin.on_guild_role_create(role)
+
+    @client.event
+    async def on_guild_role_delete(role):
+        for plugin in core.plugins:
+            await plugin.on_guild_role_delete(role)
+
+    @client.event
+    async def on_guild_role_update(before, after):
+        for plugin in core.plugins:
+            await plugin.on_guild_role_update(before, after)
+
+    @client.event
+    async def on_guild_emojis_update(guild, before, after):
+        for plugin in core.plugins:
+            await plugin.on_guild_emojis_update(guild, before, after)
+
+    @client.event
+    async def on_voice_state_update(member, before, after):
+        for plugin in core.plugins:
+            await plugin.on_voice_state_update(member, before, after)
+
+    @client.event
+    async def on_member_ban(guild, user):
+        for plugin in core.plugins:
+            await plugin.on_member_ban(guild, after)
+
+    @client.event
+    async def on_member_unban(guild, user):
+        for plugin in core.plugins:
+            await plugin.on_member_unban(guild, user)
 core = Core()
 core.client.run(core.token)
