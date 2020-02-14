@@ -51,7 +51,6 @@ class Package(package.Package):
                 ["disconnectplayer", self.disconnectPlayer], ["dplayer", self.disconnectPlayer],
                 ["connect", self.connectAndCreatePlayer],
                 ["play", self.play], ["p", self.play], 
-                ["queue", self.queueF], ["q", self.queueF], 
                 ["pause", self.pause], ["resume", self.resume], 
                 ["skip", self.skip], ["shuffleq", self.shuffleq], ["shuffle", self.shuffle],
                 ["stop", self.stop], ["repeat", self.repeat], ["status", self.status]]
@@ -335,7 +334,8 @@ class Package(package.Package):
                         },
                         {
                           'disconnectMSG': self.getText(VoiceChannel.guild.id, tchannel.id, "disconnectMSG"),
-                          'disconnectMSG2': self.getText(VoiceChannel.guild.id, tchannel.id, "disconnectMSG2")
+                          'disconnectMSG2': self.getText(VoiceChannel.guild.id, tchannel.id, "disconnectMSG2"),
+                          'enqueuedby': self.getText(VoiceChannel.guild.id, tchannel.id, "enqueuedby")
                         }], timeout = 30)
                     print(r)
 
@@ -455,34 +455,13 @@ class Package(package.Package):
                 'channel': r['uploader'],
                 'video_id': r['id'], 
                 'duration': r['duration'], 
-                'userid': message.author.id
+                'userid': message.author.id,
+                'user': message.author.nick
             },
             {
                 'play': self.getText(message.guild.id, message.channel.id, "play"),
                 'playQueue': self.getText(message.guild.id, message.channel.id, "playQueue")
             }])
-    async def queueF(self, params, message, core):
-        VoiceChannel, connection = await self.doStuff(message)
-        page = 1
-        if len(params) != 0:
-            try:
-                page = int(params[0])
-            except:
-                message.channel.send(self.getText(message.guild.id, message.channel.id, "queueNotInteger").format(params[0]))
-                return
-        connection.POST(0x102, [
-            {
-                'VoiceChannelID':   VoiceChannel.id, 
-                'TextChannelID':    message.channel.id, 
-                'page': page
-            },
-            {
-                'nothingIsPlaying': self.getText(message.guild.id, message.channel.id, "nothingIsPlaying"),
-                'queueFor':         self.getText(message.guild.id, message.channel.id, "queueFor"),
-                'queueTitle':       self.getText(message.guild.id, message.channel.id, "queueTitle"),
-                'queueError':       self.getText(message.guild.id, message.channel.id, "queueError")
-            }])
-
     async def pause(self, params, message, core):
         VoiceChannel, connection = await self.doStuff(message)
         connection.POST(0x103, [
@@ -569,6 +548,6 @@ class Package(package.Package):
                 'repeatDisabled': self.getText(message.guild.id, message.channel.id, "repeatDisabled")
             }])
     async def on_guild_join(self, guild):
-        self.db.addGuild(guild.id)
+        self.db.writeGuildData(self.name, "playerchannels", guild.id, "[]")
         self.db.writeGuildData(self.name, "role", guild.id, 0)
-        self.db.writeGuildData(self.name, "playerchannels", guild.id, """[]""")
+        self.db.writeGuildData(self.name, "djrole", guild.id, 0)
