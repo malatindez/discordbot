@@ -7,6 +7,7 @@
     "description": "Package with commands for music bot",
     "disconnectMSG": "Disconnected from {} due to inactivity",
     "disconnectMSG2": "Disconnected from {} because no one in voice channel",
+    "enqueuedby": "Enqueued by:",
     "errorChannelNotFound": "You're not connected to any channel!",
     "errorNoBotInChannel": "Bot isn't connected to your channel! Use \"connect\" to connect",
     "warningPlayer": "Warning! You can write this commands in {}",
