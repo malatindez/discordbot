@@ -129,7 +129,7 @@ class Package:
         pass
     async def on_guild_integrations_update(self, guild):
         pass
-    async def on_webhoooks_update(self, channel):
+    async def on_webhooks_update(self, channel):
         pass
     async def on_member_join(self, member):
         pass
