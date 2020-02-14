@@ -101,26 +101,26 @@ class Package(package.Package):
     async def pluginList(self, params, message, core):
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "pluginList"))
         for plugin in core.plugins:
-            embed.add_field(name = plugin.getText(message.guild.id, message.channel.id, "name") + " (" + plugin.name + ")",
-                            value = plugin.getText(message.guild.id, message.channel.id, "description"), 
-                            inline = False)
+            if len(plugin.getCommands()) != 0:
+                embed.add_field(name = plugin.getText(message.guild.id, message.channel.id, "name") + " (" + plugin.name + ")",
+                                value = plugin.getText(message.guild.id, message.channel.id, "description"), 
+                                inline = False)
         await message.channel.send(embed=embed)
 
     async def enabledPluginList(self, params, message, core):
         enabledPlugins = core.getEnabledPlugins(message)
         embed = discord.Embed(title = self.getText(message.guild.id, message.channel.id, "enabledPluginList"))
         for plugin in core.plugins:
-            if plugin.name in enabledPlugins:
+            if plugin.name in enabledPlugins and len(plugin.getCommands()) != 0 :
                 embed.add_field(name = plugin.getText(message.guild.id, message.channel.id, "name") + " (" + plugin.name + ")",
                             value = plugin.getText(message.guild.id, message.channel.id, "description"), 
                             inline = False)
         await message.channel.send(embed=embed)
 
     async def connectPlugin(self, params, message, core):
-        x = core.plugins
         f = False
-        for i in x:
-            if i.name == params[0]:
+        for plugin in core.plugins:
+            if plugin.name == params[0] and len(plugin.getCommands()) != 0:
                 f = True
                 break
         if not f:
