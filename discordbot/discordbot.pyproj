@@ -42,6 +42,9 @@
     <Compile Include="BotPackages\music\musicbot.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="BotPackages\music\music_queue.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="BotPackages\music\music_network.py" />
     <Compile Include="BotPackages\r6stats\r6stats.py" />
     <Compile Include="BotPackages\Service\Service.py" />
