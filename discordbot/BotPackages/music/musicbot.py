@@ -37,23 +37,76 @@ async def guilds_list(data, bconn):
         x.append(guild.id)
     return x
 from music_queue import Song, SongQueue
+class VoteSystem:
+    class VoteList:
+        def __init__(self, code, callback):
+            self.timecode = time()
+            self.code = code
+            self.voters = []
+            self.callback = callback
+        def addVote(self, userid):
+            if str(userid) in self.voters:
+                return
+            self.timecode = time()
+            self.voters.append(str(userid))
+        def getText(self, code, num, localisation):
+            return localisation[code].format(len(self.voters), num)
+        
+    def __init__(self, localisationRef, vcref, prole, djrole):
+        self.votelists = []
+        self.text = "Status:"
+        self.localisation = localisationRef
+        self.vc = vcref
+        self.prole = None
+        self.djrole = None
+        if prole != 0:
+            self.prole = self.vc.guild.get_role(prole)
+        if djrole != 0:
+            self.djrole = self.vc.guild.get_role(djrole)
+
+    async def addVote(self, code, userid, callback):
+        member = await self.vc.guild.fetch_member(userid)
+        if self.djrole is not None:
+            for role in member.roles:
+                if self.djrole <= role:
+                    print(role)
+                    for votelist in self.votelists:
+                        if votelist.code == code:
+                            votelists.remove(votelist)
+                            break
+                    client.loop.create_task(callback())
+                    return
+        for votelist in self.votelists:
+            if votelist.code == code:
+                votelist.addVote(userid)
+                return
+        x = VoteSystem.VoteList(code, callback)
+        x.addVote(userid)
+        self.votelists.append(x)
+    def calculateMembers(self):
+        return round((len(self.vc.members) - 1) / 2)
+
+    def update(self):
+        self.text = "Status:"
+        num = self.calculateMembers()
+        for votelist in self.votelists:
+            if len(votelist.voters) >= num:
+                client.loop.create_task(votelist.callback())
+                self.votelists.remove(votelist)
+                continue
+            self.text += "\n" + votelist.getText(votelist.code, num, self.localisation)
 class VClientData:
-    def __init__(self, VoiceChannel = None, VoiceClient = None, TextChannel = None, disconnectMSG = None,
-                disconnectMSG2 = None, enqueuedby = None, queue = [None], role = None):
+    def __init__(self, VoiceChannel, VoiceClient, TextChannel, localisation, prole, djrole):
         self.VoiceClient = VoiceClient
-        print(VoiceClient)
         self.VoiceChannel = VoiceChannel
         self.TextChannel = TextChannel
-        self.disconnectMSG = disconnectMSG
-        self.disconnectMSG2 = disconnectMSG2
-        self.queue = SongQueue(enqueuedby)
-        print(queue)
-        print(self.queue)
-        self.role = role
+        self.localisation = localisation
+        self.queue = SongQueue(localisation['enqueuedby'])
         self.timestamp = time()
         self.timestampm = time()
-        self.Text = "Status:"
         self.msg = None
+        self.role = None
+        self.VS = VoteSystem(self.localisation, self.VoiceChannel, prole, djrole)
     async def delete(self):
         try:
             await self.VoiceClient.disconnect()
@@ -71,18 +124,15 @@ class VClientData:
         if not user.id == client.user.id:
             if str(reaction.emoji) == '⏯️':
                 if self.queue.paused:
-                    self.VoiceClient.resume()
+                    await self.VS.addVote('resumeVote', user.id, self.resume)
                 else:
-                    self.VoiceClient.pause()
-                self.queue.paused = not self.queue.paused
+                    await self.VS.addVote('pauseVote', user.id, self.pause)
             elif str(reaction.emoji) == '⏭️':
-                self.VoiceClient.stop()
+                await self.VS.addVote('skipVote', user.id, self.skip)
             elif str(reaction.emoji) == '🔀':
-                self.queue.shuffle = not self.queue.shuffle
+                await self.VS.addVote('shuffleVote', user.id, self.shuffle)
             elif str(reaction.emoji) == '🔁':
-                if self.queue.repeat == 2:
-                    self.queue.repeat = -1
-                self.queue.repeat = self.queue.repeat + 1
+                await self.VS.addVote('repeatVote', user.id, self.repeat)
             elif str(reaction.emoji) == '⬅️':
                 if self.queue.page == 0:
                     self.queue.page = int((len(self.queue.queue) - 2) / 7)
@@ -95,11 +145,32 @@ class VClientData:
                     self.queue.page = 0
             await reaction.remove(user)
             print(self.queue.page)
+
+    async def pause(self):
+        self.VoiceClient.pause()
+        self.queue.paused = True
+
+    async def resume(self):
+        self.VoiceClient.resume()
+        self.queue.paused = False
+        
+    async def skip(self):
+        if self.VoiceClient.is_playing():
+            self.VoiceClient.stop()
+
+    async def shuffle(self):
+        self.queue.shuffle = not self.queue.shuffle
+
+    async def repeat(self):
+        if self.queue.repeat == 2:
+            self.queue.repeat = -1
+        self.queue.repeat = self.queue.repeat + 1
+
     async def inactivityMSG(self):
-        await self.TextChannel.send(self.disconnectMSG.format(self.VoiceChannel.name))
+        await self.TextChannel.send(self.localisation['disconnectMSG'].format(self.VoiceChannel.name))
 
     async def nooneMSG(self):
-        await self.TextChannel.send(self.disconnectMSG2.format(self.VoiceChannel.name))
+        await self.TextChannel.send(self.localisation['disconnectMSG2'].format(self.VoiceChannel.name))
 
 
     
@@ -115,6 +186,7 @@ class VClientData:
 
     async def update(self):
         try:
+            self.VS.update()
             if len(self.VoiceChannel.members) > 1:
                 self.timestampm = time()
             if self.VoiceClient.is_playing():
@@ -124,60 +196,34 @@ class VClientData:
                 if song is not None:
                     self.ffmpeg = discord.FFmpegPCMAudio(song.filepath)
                     self.VoiceClient.play(self.ffmpeg)
-                    await client.get_channel(song.TextChannelID).send(song.play.format(song.title))
             if len(self.queue.queue) < self.queue.page * 7 + 8:
                 self.queue.page = int((len(self.queue.queue) - 2) / 7)
             self.queue.update()
+            if self.msg is None:
+                self.msg =  await self.TextChannel.send(content = self.VS.text)
+                await self.msg.add_reaction('⏯️')
+                await self.msg.add_reaction('⏭️')
+                await self.msg.add_reaction('⬛')
+                await self.msg.add_reaction('◾')
+                await self.msg.add_reaction('🔀')
+                await self.msg.add_reaction('🔁')
+                await self.msg.add_reaction('▪️')
+                await self.msg.add_reaction('⬅️')
+                await self.msg.add_reaction('➡️')
+            if self.msg.content != self.VS.text:
+                await self.msg.edit(content=self.VS.text)
             if self.queue.update_flag:
                 self.queue.update_flag = False
-                if self.msg is None:
-                    self.msg =  await self.TextChannel.send(content = self.Text)
-                    await self.msg.add_reaction('⏯️')
-                    await self.msg.add_reaction('⏭️')
-                    await self.msg.add_reaction('⬛')
-                    await self.msg.add_reaction('◾')
-                    await self.msg.add_reaction('🔀')
-                    await self.msg.add_reaction('🔁')
-                    await self.msg.add_reaction('▪️')
-                    await self.msg.add_reaction('⬅️')
-                    await self.msg.add_reaction('➡️')
-                if self.msg.content != self.Text:
-                    print(self.msg.content)
-                    print(self.Text)
-                    await self.msg.edit(content=self.Text)
-
                 msg = await self.TextChannel.send(file=discord.File("tmpMusic.png", filename="tmpMusic.png"))
                 await self.TextChannel.purge(limit=100, check=lambda x: x.id != msg.id and x.id != self.msg.id)
         except Exception as e:
             print(e)
 
     async def play(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        self.queue.append(Song(data))
-
-    async def pause(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        self.VoiceClient.pause()
-        self.queue.paused = True
-
-    async def resume(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        self.VoiceClient.resume()
-        self.queue.paused = False
-
-    async def skip(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        if self.VoiceClient.is_playing():
-            self.VoiceClient.stop()
-
-    async def shufflen(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        print(self.queue.shuffle)
-        self.queue.shuffle = not self.queue.shuffle
-        print(self.queue.shuffle)
+        print(data[0])
+        self.queue.append(Song(data[0]))
 
     async def shuffleq(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
         x = [self.queue.queue[0]]
         self.queue.queue.remove(self.queue.queue[0])
         while len(self.queue.queue) > 0:
@@ -185,29 +231,23 @@ class VClientData:
             x.append(self.queue.queue[i])
             self.queue.queue.remove(self.queue.queue[i])
         self.queue.queue.extend(x)
-
-    async def stop(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
+    
+    async def stopF(self):
         await self.VoiceClient.disconnect()
 
-    async def repeatf(self, data):
-        tchannel = client.get_channel(data[0]['TextChannelID'])
-        if self.queue.repeat == data[0]['state'] + 1:
-            self.queue.repeat = 0
-        elif self.queue.queue[0] is not None:  
-            self.queue.repeat = data[0]['state'] + 1
-                  else:
-            self.queue.repeat = data[0]['state'] + 1
-        print(self.queue.repeat)
+    async def stop(self, data):
+        await self.VS.addVote('stopVote', data[0]['userid'], self.stopF)
+        
+
 voice_clients = []
 connect_status = -1
-async def connect(voice_channel_id, text_channel_id, disconnectMSG, disconnectMSG2, enqueuedby):
+async def connect(data):
     global connect_status
     try:
-        VoiceChannel = client.get_channel(voice_channel_id)
+        VoiceChannel = client.get_channel(data[0]['VoiceChannelID'])
         
-        tchannel = client.get_channel(text_channel_id)
-        c = VClientData(VoiceChannel, None, tchannel, disconnectMSG, disconnectMSG2, enqueuedby)
+        tchannel = client.get_channel(data[0]['TextChannelID'])
+        c = VClientData(VoiceChannel, None, tchannel, data[1], data[0]['prole'], data[0]['djrole'])
         
         c.role = await VoiceChannel.guild.create_role(name="tPlayerAccessRole")
         await tchannel.purge(limit=1000)
@@ -238,11 +278,7 @@ async def connectCallback(data, bconn):
     print("connectCallback called")
     global connect_status
     connect_status = -1
-    t = client.loop.create_task(connect(data[0]['VoiceChannelID'],
-                                        data[0]['TextChannelID'],
-                                        data[1]['disconnectMSG'],
-                                        data[1]['disconnectMSG2'],
-                                        data[1]['enqueuedby']))
+    t = client.loop.create_task(connect(data))
     while True:
         if connect_status == 0:
             break
@@ -256,26 +292,12 @@ async def generalFunc(func_name, data):
 async def playCallback(data, bconn):
     client.loop.create_task(generalFunc("play", data))
 
-async def pauseCallback(data, bconn):
-    client.loop.create_task(generalFunc("pause", data))
-
-async def resumeCallback(data, bconn):
-    client.loop.create_task(generalFunc("resume", data))
-
-async def skipCallback(data, bconn):
-    client.loop.create_task(generalFunc("skip", data))
-
-async def shufflenCallback(data, bconn):
-    client.loop.create_task(generalFunc("shufflen", data))
-    
 async def shuffleqCallback(data, bconn):
     client.loop.create_task(generalFunc("shuffleq", data))
 
 async def stopCallback(data, bconn):
     client.loop.create_task(generalFunc("stop", data))
 
-async def repeatCallback(data, bconn):
-    client.loop.create_task(generalFunc("repeatf", data))
 
 
 dead = False
@@ -284,8 +306,8 @@ async def queueHandler():
     while True:
         for vclient in voice_clients:
             if not vclient.VoiceClient.is_connected():
-                print("deleting bot")
                 conn.POST(0, [vclient.VoiceChannel.id])
+                await vclient.delete()
                 voice_clients.remove(vclient)
                 continue
             if not vclient.VoiceClient.is_paused():
@@ -341,11 +363,10 @@ async def on_ready():
     global conn
     conn = bconn(sock, callbacks = [[get_user_id, 0], [guilds_list, 1], 
                                     [connectCallback, 0x100], [playCallback, 0x101],
-                                    [pauseCallback, 0x103], [resumeCallback, 0x104], [skipCallback, 0x105],
-                                    [shufflenCallback, 0x106], [shuffleqCallback, 0x107], [stopCallback, 0x108], 
-                                    [repeatCallback, 0x109]])
+                                    [shuffleqCallback, 0x107], [stopCallback, 0x108]])
 @client.event
 async def on_guild_join(guild):
+    print("CONN.POST(1, [guild.id])")
     conn.POST(1, [guild.id])
 @client.event
 async def on_guild_remove(guild):
