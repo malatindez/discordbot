@@ -4,18 +4,15 @@ from io import BytesIO
 import requests
 
 class Song:
-    def __init__(self, data, data2 = {}):
+    def __init__(self, data):
         print(data)
-        for key in data[0].keys():
-            setattr(self, key, data[0][key])
-        for key in data[1].keys():
-            setattr(self, key, data[1][key])
+        for key in data.keys():
+            setattr(self, key, data[key])
     def __str__(self):
         return """
 filepath: {}
 Title: {}
 TC id: {}
-Now_playing string: {}
 User id: {}
 Track: {}
 Alt title: {}
@@ -23,7 +20,7 @@ Artist: {}
 Channel: {}
 Video id: {}
 Duration: {}
-""".format(self.filepath, self.title, self.TextChannelID, self.play,
+""".format(self.filepath, self.title, self.TextChannelID,
            self.userid, self.track, self.alt_title, self.artist,
            self.channel, self.video_id, self.duration)
 from random import randint
@@ -138,7 +135,6 @@ class SongQueue:
                 self.curr_img.paste(self.repeat_one, (799, 1), mask=self.repeat_one)
             elif self.repeat == 2:
                 self.curr_img.paste(self.repeat_all, (799, 1), mask=self.repeat_all)
-            print(self.shuffle)
             if self.shuffle == 0:
                 self.curr_img.paste(self.shuffle_gray, (640, 1), mask=self.shuffle_gray)
             elif self.shuffle == 1:
@@ -148,7 +144,6 @@ class SongQueue:
                 self.curr_img.paste(self.play_gray, (31, 1), mask = self.play_gray)
             else:
                 self.curr_img.paste(self.pause_gray, (31, 1), mask = self.pause_gray)
-
             if self.queue[0] is not None:
                 for i in self.queue:
                     if not hasattr(i, 'img'):
@@ -176,9 +171,7 @@ class SongQueue:
                 draw.text((764, 354), self.bettertime(self.queue[0].duration), fill = (170, 170, 170), font=self.font64)
                 draw.text((470, 480), self.enqueuedby, fill = (170, 170, 170), font=self.font48)
                 draw.text((610, 590), self.queue[0].user, fill = (170, 170, 170), font=self.font36)
-
                 for i in range(1 + self.page * 7, len(self.queue)):
-                    print(self.queue)
                     if i == 1 + (self.page+1) * 7:
                         break
                     self.curr_img.paste(self.cropAndResize(self.queue[i].img, (80, 80)), (962, 57 + (i - self.page * 7) * 80))
@@ -199,7 +192,6 @@ class SongQueue:
             self.update_flag = True
     def next(self):
         song = None
-        print(self.queue)
         if self.repeat == 0:
             if self.shuffle:
                 rand = randint(1 , len(self.queue))
