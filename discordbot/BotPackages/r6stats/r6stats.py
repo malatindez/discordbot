@@ -80,9 +80,9 @@ class Package(package.Package):
         response = requests.get("https://r6.tracker.network/profile/pc/{0}".format(name))
         userid = None
         try:
-            userid =json.loads(requests.get("https://r6tab.com/api/search.php?platform=uplay&search={}".format(name)).content)['results'][0]['p_id']
-        except:
-            pass
+            userid =json.loads(requests.get("https://r6tab.com/api/search.php?platform=uplay&search={}".format(name)).content.decode('utf-8'))['results'][0]['p_id']
+        except Exception as e:
+            print(e)
         x = str(response.content)
         if not response.ok:
             await message.channel.send(self.getText(message.guild.id, message.channel.id, "wrongName"))
