@@ -33,18 +33,21 @@ class Package(package.Package):
         self.importance = 0
         
         self.lock = asyncio.Lock()
-
         self.network = socket.socket()
+        self.network.setblocking(False)
+        print("binding")
         self.network.bind(('localhost', 28484))
         self.network.listen(16)
-        
         self.musicbots = []
         open('musictokens', 'a').close()
         lines = open('musictokens', 'r').readlines()
         self.botsnum = len(lines)
         for token in lines:
             token = token.replace('\r', '').replace('\n', '')
-            os.system("start python BotPackages\\music\\musicbot.py " + token + "\r\npause")
+            if platform.system() == "Windows":
+                os.system("start python BotPackages\\music\\musicbot.py " + token + "\r\npause")
+            if platform.system() == "Linux":
+                os.system("python3 BotPackages/music/musicbot.py " + token + " &")
 
     def getCommands(self): 
         return [["help", self.help], ["djrole", self.djrole], ["prole", self.prole], 
@@ -123,10 +126,10 @@ class Package(package.Package):
         while not hasattr(self, 'network'):
             await asyncio.sleep(1)
         while len(self.connections) != self.botsnum:
-            conn, addr = self.network.accept()
-            self.connections.append(bconn(conn, callbacks=[[self.UVC, 0], [self.g_join, 1], [self.g_remove, 2]]))
+            conn, addr = await asyncio.get_event_loop().sock_accept(self.network)
+            self.connections.append(bconn(self.core.client.loop, conn, callbacks=[[self.UVC, 0], [self.g_join, 1], [self.g_remove, 2]]))
             await asyncio.sleep(0.25)
-                
+        await self.lock.acquire()
         for connection in self.connections:
             connection.user_id = (await connection.GET(0,[], 0.05))[0]
             connection.guild_ids = await connection.GET(1,[], 0.05)
@@ -135,6 +138,8 @@ class Package(package.Package):
             for guild_id in connection.guild_ids:
                 connection.gvc_ids.update({guild_id: None})
             connection.vc_id = 0
+        print("network_inited")
+        self.lock.release()
 
     async def help(self, params, message, core):
         prefix = core.db.getGuildData("Service", "Prefix", message.guild.id)    
@@ -161,9 +166,74 @@ class Package(package.Package):
 
     async def prole(self, params, message, core):
         await self.roleStuff(params, message, core, "role")
-        
+    
     async def connectPlayer(self, params, message, core):
         x = json.loads(self.db.getGuildData(self.name, "playerchannels", message.guild.id))
+        botroleid = self.db.getGuildData(self.name, "botrole", message.guild.id, id)
+        if botroleid == 0:
+            try:
+                Role = await message.guild.create_role(name="MusicBot",
+                                                permissions=Permissions(
+                                            add_reactions=True,
+                                            read_messages=True,
+                                            send_messages=True,
+                                            send_tts_messages=True,
+                                            manage_messages=True,
+                                            embed_links=True,
+                                            read_message_history=True,
+                                            use_external_emojis=True,
+                                            mention_everyone=True,
+                                            attach_files=True,
+                                            ))
+                botroleid = Role.id
+                self.db.writeGuildData(self.name, "botrole", message.guild.id, Role.id)
+                for connection in self.connections:
+                    member = None
+                    try:
+                        member = await message.guild.fetch_user(connection.user_id)
+                    except:
+                        continue
+                    membe
+            except Exception as e:
+                await message.channel.send(
+                    self.getText(message.guild.id, message.channel.id,"cplayerPermissionsError").format(e))
+
+        for connection in self.connections:
+            try:
+                r = None
+                member = await message.guild.fetch_member(connection.user_id)
+                for role in member.roles:
+                    if role.name == member.name:
+                        r = role
+                await message.channel.set_permissions(r, overwrite=discord.PermissionOverwrite(
+                                        add_reactions=True,
+                                        read_messages=True,
+                                        send_messages=True,
+                                        send_tts_messages=True,
+                                        manage_messages=True,
+                                        embed_links=True,
+                                        read_message_history=True,
+                                        use_external_emojis=True,
+                                        mention_everyone=True,
+                                        attach_files=True
+                                        ))
+                await message.channel.set_permissions(r, overwrite=discord.PermissionOverwrite(
+                                        add_reactions=True,
+                                        read_messages=True,
+                                        send_messages=True,
+                                        send_tts_messages=True,
+                                        manage_messages=True,
+                                        embed_links=True,
+                                        read_message_history=True,
+                                        use_external_emojis=True,
+                                        mention_everyone=True,
+                                        manage_permissions=True,
+                                        attach_files=True
+                                        ))
+            except Exception as e:
+                print("In connect player: ")
+                print(e)
+
         if message.channel.id not in x:
             x.append(message.channel.id)
             for role in message.channel.overwrites.keys():
@@ -182,6 +252,14 @@ class Package(package.Package):
                         use_external_emojis=False,
                         mention_everyone=False
                         ))
+                else:
+                    f = False
+                    for connection in self.connections:
+                        member = await message.guild.fetch_member(connection.user_id)
+                        if member.name == role.name:
+                            f = True
+                    if not f:
+                        await message.channel.set_permissions(role, overwrite=None)
         else:
             return
         self.db.writeGuildData(self.name, "playerchannels", message.guild.id, json.dumps(x))
@@ -306,31 +384,6 @@ class Package(package.Package):
                 if guild_id == VoiceChannel.guild.id:
                     if connection.gvc_ids[guild_id] is not None:
                         break
-
-                    role = None
-                    for r in message.guild.get_member(connection.user_id).roles:
-                        if r.name != "@everyone":
-                            role = r
-                    print(role)
-                    tchannel = message.guild.get_channel(a)
-                    for r in tchannel.overwrites.keys():
-                        if r.name != "@everyone":
-                            await tchannel.set_permissions(r, overwrite=None)
-
-                    await tchannel.set_permissions(
-                        role, overwrite=discord.PermissionOverwrite(
-                                    add_reactions=True,
-                                    read_messages=True,
-                                    send_messages=True,
-                                    send_tts_messages=True,
-                                    manage_messages=True,
-                                    embed_links=True,
-                                    read_message_history=True,
-                                    use_external_emojis=True,
-                                    mention_everyone=True,
-                                    manage_permissions=True,
-                                    attach_files=True
-                                    ))
                     x = self.db.getGuildData(self.name, "role", message.guild.id)
                     dj = self.db.getGuildData(self.name, "djrole", message.guild.id)
                     r = await connection.GET(0x100, [
@@ -340,9 +393,8 @@ class Package(package.Package):
                             'prole': x,
                             'djrole': dj
                         },
-                        self.localisation.data[self.getChannelLanguage(VoiceChannel.guild.id, tchannel.id)]
+                        self.localisation.data[self.getChannelLanguage(VoiceChannel.guild.id, message.channel.id)]
                         ], timeout = 30)
-                    print(r)
 
                     if r != ["Success"]: # Error occured
                         for r in tchannel.overwrites.keys():
@@ -484,3 +536,4 @@ class Package(package.Package):
         self.db.writeGuildData(self.name, "playerchannels", guild.id, "[]")
         self.db.writeGuildData(self.name, "role", guild.id, 0)
         self.db.writeGuildData(self.name, "djrole", guild.id, 0)
+        self.db.writeGuildData(self.name, "botrole", guild.id, 0)
