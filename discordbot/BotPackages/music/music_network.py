@@ -56,42 +56,41 @@ class PackageCreator:
         req.type = typep
         return req
 
-    def from_bytes(self, connRef):
+    async def from_bytes(self, connRef):
         x = Package()
         data = bytearray()
-        print("waiting for data")
-        code = connRef.recv(2)
+        code = await asyncio.get_event_loop().sock_recv(connRef, 2)
         x.code = int.from_bytes(code,byteorder='big')
-        salt = connRef.recv(2)
+        salt = await asyncio.get_event_loop().sock_recv(connRef, 2)
         x.salt = int.from_bytes(salt,byteorder='big')
-        type = connRef.recv(1)
+        type = await asyncio.get_event_loop().sock_recv(connRef, 1)
         x.type = int.from_bytes(type,byteorder='big')
         x.data = []
-        def getData():
-            lenstring = connRef.recv(2)
+        async def getData():
+            lenstring = await asyncio.get_event_loop().sock_recv(connRef, 2)
             lenstr = int.from_bytes(lenstring, byteorder='big')
-            return connRef.recv(lenstr)
+            returnData = await asyncio.get_event_loop().sock_recv(connRef, lenstr)
+            return returnData
         while True:
-            tb = connRef.recv(1)
+            tb = await asyncio.get_event_loop().sock_recv(connRef, 1)
             data.extend(tb)
             type = 254 - int.from_bytes(tb, byteorder='big')
-            print(type)
             if type == -1:
                 break
             if type > len(self.available_types):
                 raise ValueError
             if self.available_types[type] == int:
-                integer = connRef.recv(8)
+                integer = await asyncio.get_event_loop().sock_recv(connRef, 8)
                 x.data.append(int.from_bytes(integer, byteorder='big'))
             elif self.available_types[type] == bool:
-                boolean = connRef.recv(1)
+                boolean = await asyncio.get_event_loop().sock_recv(connRef, 1)
                 x.data.append(bool.from_bytes(boolean, byteorder='big'))
             elif self.available_types[type] == str:
-                x.data.append(getData().decode('utf-8'))
+                x.data.append((await getData()).decode('utf-8'))
             elif self.available_types[type] == dict or self.available_types[type] == list:
-                x.data.append(json.loads(getData()))
+                x.data.append(json.loads((await getData()).decode('utf-8')))
             else:
-                recvdata = getData()
+                recvdata = await getData()
                 x.data.append(self.available_types[type].from_bytes(recvdata))
         return x
 from threading import Thread
@@ -100,18 +99,13 @@ from random import randint
 from time import time
 class bconn:
     dead = False
-    def __init__(self, conn, additional_types = [], callbacks = []):
+    def __init__(self, loop, conn, additional_types = [], callbacks = []):
         self.pc = PackageCreator(additional_types)
         self.conn = conn
         self.callbacks = callbacks
         self.salts = []
         self.get_responses = {}
-        self.loop = asyncio.new_event_loop()
-        self.loop.create_task(self.update())
-        self.loop_thread = Thread(target=self.loop.run_forever,args=())
-        self.loop_thread.start()
-    def __del__(self):
-        self.loop.stop()
+        loop.create_task(self.update())
 
     # async def func(data, conn)
     # those funcs must use locks
@@ -148,10 +142,8 @@ class bconn:
     # GET_RESPONSE, TYPE = 2
     async def update(self):
         while True:
-            print('update')
             try:
-                r = self.pc.from_bytes(self.conn)
-                print(r)
+                r = await self.pc.from_bytes(self.conn)
 
                 if r.type == 2:
                     self.get_responses.update({r.salt:r.data})
