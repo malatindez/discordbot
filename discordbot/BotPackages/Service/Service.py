@@ -33,7 +33,7 @@ class Package(package.Package):
              ["cprefix", self.changePrefix], ["changeprefix", self.changePrefix]]
     
     def isAbleToUse(self, commandName, member):
-        return member.guild_permissions.administrator or user.id == 595328091962867717
+        return member.guild_permissions.administrator or member.id == 595328091962867717
     
     def getUpdateFunctions(self):
         return [self.saveDBUpdate]
