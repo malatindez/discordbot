@@ -2,7 +2,7 @@
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import requests
-
+import platform
 class Song:
     def __init__(self, data):
         print(data)
@@ -46,20 +46,36 @@ class SongQueue:
         self.repeat = False
         self.shuffle = 0
         self.enqueuedby = enqueuedby
-        self.template = Image.open("BotPackages\\music\\template.png")
-        self.pause_gray = Image.open("BotPackages\\music\\pause_gray.png")
-        self.play_gray = Image.open("BotPackages\\music\\play_gray.png")
-        self.repeat_gray = Image.open("BotPackages\\music\\repeat_gray.png")
-        self.repeat_one = Image.open("BotPackages\\music\\repeat_one.png")
-        self.repeat_all = Image.open("BotPackages\\music\\repeat_all.png")
-        self.shuffle_gray = Image.open("BotPackages\\music\\shuffle_gray.png")
-        self.shuffle_white = Image.open("BotPackages\\music\\shuffle_white.png")
-        self.font12 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 12)
-        self.font16 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 16)
-        self.font24 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 24)
-        self.font36 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 36)
-        self.font48 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 48)
-        self.font64 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 64)
+        if platform.system() == "Linux":
+            self.template = Image.open("BotPackages/music/template.png")
+            self.pause_gray = Image.open("BotPackages/music/pause_gray.png")
+            self.play_gray = Image.open("BotPackages/music/play_gray.png")
+            self.repeat_gray = Image.open("BotPackages/music/repeat_gray.png")
+            self.repeat_one = Image.open("BotPackages/music/repeat_one.png")
+            self.repeat_all = Image.open("BotPackages/music/repeat_all.png")
+            self.shuffle_gray = Image.open("BotPackages/music/shuffle_gray.png")
+            self.shuffle_white = Image.open("BotPackages/music/shuffle_white.png")
+            self.font12 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 12)
+            self.font16 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 16)
+            self.font24 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 24)
+            self.font36 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 36)
+            self.font48 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 48)
+            self.font64 = ImageFont.truetype(r"BotPackages/music/LeelawUI.ttf", 64)
+        elif platform.system() == "Windows":
+            self.template = Image.open("BotPackages\\music\\template.png")
+            self.pause_gray = Image.open("BotPackages\\music\\pause_gray.png")
+            self.play_gray = Image.open("BotPackages\\music\\play_gray.png")
+            self.repeat_gray = Image.open("BotPackages\\music\\repeat_gray.png")
+            self.repeat_one = Image.open("BotPackages\\music\\repeat_one.png")
+            self.repeat_all = Image.open("BotPackages\\music\\repeat_all.png")
+            self.shuffle_gray = Image.open("BotPackages\\music\\shuffle_gray.png")
+            self.shuffle_white = Image.open("BotPackages\\music\\shuffle_white.png")
+            self.font12 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 12)
+            self.font16 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 16)
+            self.font24 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 24)
+            self.font36 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 36)
+            self.font48 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 48)
+            self.font64 = ImageFont.truetype(r"BotPackages\\music\\LeelawUI.ttf", 64)
         self.curr_img = self.template.copy()
         self.curr_img_queue = []
         self.curr_shuffle = 0
