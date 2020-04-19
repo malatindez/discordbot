@@ -6,9 +6,9 @@ from music_network import bconn
 
 client = discord.Client()
 
-print(sys.argv[1])
 
 sock = socket.socket()
+sock.setblocking(False)
 
 # 0 - get_user_id
 # response:
@@ -359,14 +359,13 @@ async def queueHandler():
 @client.event
 async def on_ready():
     print("Вошёл как " + client.user.name + ". Мой ID: " + str(client.user.id))
-    sock.connect(('localhost', 28484))
+    await asyncio.get_event_loop().sock_connect(sock, ('127.0.0.1', 28484))
     global conn
-    conn = bconn(sock, callbacks = [[get_user_id, 0], [guilds_list, 1], 
+    conn = bconn(client.loop, sock, callbacks = [[get_user_id, 0], [guilds_list, 1], 
                                     [connectCallback, 0x100], [playCallback, 0x101],
                                     [shuffleqCallback, 0x107], [stopCallback, 0x108]])
 @client.event
 async def on_guild_join(guild):
-    print("CONN.POST(1, [guild.id])")
     conn.POST(1, [guild.id])
 @client.event
 async def on_guild_remove(guild):
@@ -390,19 +389,4 @@ async def on_voice_state_update(member, before, after):
             client.loop.create_task(member.add_roles(vclient.role))
             break
 client.loop.create_task(queueHandler())
-import threading
-thread = threading.Thread(target=client.run, args=(sys.argv[1],))
-thread.start()
-import os
-while client.loop.is_running():
-    sleep(3)
-    if dead == True:
-        print('dead.')
-        sleep(10)
-        for task in asyncio.all_tasks(loop=client.loop):
-            task.cancel()
-        sleep(5)
-        break
-
-os._exit(0)
-
+client.run(sys.argv[1])
